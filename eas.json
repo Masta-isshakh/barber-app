@@ -7,25 +7,21 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": {
-        "NPM_FLAGS": "--legacy-peer-deps"
+      "android": {
+        "config": "preview-android.yml"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "NPM_FLAGS": "--legacy-peer-deps"
+        "buildType": "apk",
+        "config": "preview-android.yml"
       }
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
-      },
-      "env": {
-        "NPM_FLAGS": "--legacy-peer-deps"
+        "buildType": "app-bundle",
+        "config": "production-android.yml"
       }
     }
   },

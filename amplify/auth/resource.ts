@@ -1,4 +1,6 @@
 import { defineAuth } from '@aws-amplify/backend';
+import { blockSelfSignup } from '../functions/block-self-signup/resource';
+import { customMessage } from '../functions/custom-message/resource';
 
 /**
  * Define and configure your auth resource
@@ -7,5 +9,10 @@ import { defineAuth } from '@aws-amplify/backend';
 export const auth = defineAuth({
   loginWith: {
     email: true,
+  },
+  groups: ['admins', 'barbers'],
+  triggers: {
+    preSignUp: blockSelfSignup,
+    customMessage,
   },
 });

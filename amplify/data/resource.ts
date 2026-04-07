@@ -1,17 +1,68 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { inviteBarber } from '../functions/invite-barber/resource';
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any unauthenticated user can "create", "read", "update", 
-and "delete" any "Todo" records.
-=========================================================================*/
 const schema = a.schema({
-  Todo: a
+  BarberProfile: a
     .model({
-      content: a.string(),
+      cognitoUsername: a.string().required(),
+      fullName: a.string().required(),
+      username: a.string().required(),
+      email: a.email().required(),
+      phone: a.string(),
+      role: a.enum(['ADMIN', 'BARBER']),
+      status: a.enum(['INVITED', 'ACTIVE', 'DISABLED']),
+      specialty: a.string(),
+      shiftLabel: a.string(),
+      commissionRate: a.float(),
+      bio: a.string(),
+      joinedOn: a.date(),
+      avatarColor: a.string(),
+      invitationSentAt: a.datetime(),
+      lastLoginAt: a.datetime(),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.group('admins'),
+      allow.ownerDefinedIn('cognitoUsername').to(['read']),
+    ]),
+  RevenueEntry: a
+    .model({
+      barberId: a.id().required(),
+      cognitoUsername: a.string().required(),
+      barberName: a.string().required(),
+      amount: a.float().required(),
+      serviceLabel: a.string().required(),
+      paymentMethod: a.enum(['CASH', 'CARD', 'TRANSFER']),
+      notes: a.string(),
+      earnedAt: a.datetime().required(),
+    })
+    .authorization((allow) => [
+      allow.group('admins'),
+      allow.ownerDefinedIn('cognitoUsername').identityClaim('cognito:username').to(['create', 'read']),
+    ]),
+  InviteBarberResponse: a.customType({
+    success: a.boolean().required(),
+    message: a.string().required(),
+    temporaryPassword: a.string().required(),
+    username: a.string().required(),
+    email: a.email().required(),
+    inviteLink: a.string().required(),
+  }),
+  inviteBarber: a
+    .mutation()
+    .arguments({
+      fullName: a.string().required(),
+      username: a.string().required(),
+      email: a.email().required(),
+      phone: a.string(),
+      specialty: a.string().required(),
+      shiftLabel: a.string(),
+      commissionRate: a.float(),
+      bio: a.string(),
+      avatarColor: a.string(),
+    })
+    .returns(a.ref('InviteBarberResponse'))
+    .authorization((allow) => [allow.group('admins')])
+    .handler(a.handler.function(inviteBarber)),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,35 +70,6 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'identityPool',
+    defaultAuthorizationMode: 'userPool',
   },
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>

@@ -2,6 +2,7 @@
   "expo": {
     "name": "barber_app",
     "slug": "barber_app",
+    "scheme": "barberapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,7 +14,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mastajazz.barberapp"
     },
     "android": {
       "adaptiveIcon": {
@@ -26,6 +28,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f3ca1fc1-02bf-4500-bc4c-5824157b42ee"
+      }
+    },
+    "owner": "masta-jazz"
   }
 }

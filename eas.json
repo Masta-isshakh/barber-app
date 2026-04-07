@@ -1,21 +1,31 @@
 {
   "cli": {
-    "version": ">= 15.0.0"
+    "version": ">= 15.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "NPM_FLAGS": "--legacy-peer-deps"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "NPM_FLAGS": "--legacy-peer-deps"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "NPM_FLAGS": "--legacy-peer-deps"
       }
     }
   },

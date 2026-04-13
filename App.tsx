@@ -144,7 +144,7 @@ export default function App() {
   const [profiles, setProfiles] = useState<BarberProfile[]>([]);
   const [entries, setEntries] = useState<RevenueEntry[]>([]);
 
-  const [loginUsername, setLoginUsername] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [needPasswordReset, setNeedPasswordReset] = useState(false);
@@ -203,7 +203,7 @@ export default function App() {
         return;
       }
 
-      setLoginUsername(invite.identifier);
+      setLoginIdentifier(invite.identifier);
       setLoginPassword(invite.password);
       setLoginError('');
     };
@@ -313,7 +313,7 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
-      const result = await signIn({ username: loginUsername.trim(), password: loginPassword });
+      const result = await signIn({ username: loginIdentifier.trim().toLowerCase(), password: loginPassword });
       if (result.nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
         setNeedPasswordReset(true);
         setLoginError('Set a new password to continue.');
@@ -327,7 +327,12 @@ export default function App() {
       setLoginError('');
       await refreshSession();
     } catch (error: any) {
-      setLoginError(error?.message ?? 'Login failed.');
+      const message = error?.message ?? 'Login failed.';
+      if (/incorrect username or password/i.test(message)) {
+        setLoginError('Incorrect email or password. Admin users must sign in with their Cognito email address. If this user was just created in Cognito, set a permanent password first or complete the first-login password change.');
+        return;
+      }
+      setLoginError(message);
     }
   };
 
@@ -470,7 +475,7 @@ export default function App() {
           <Text style={styles.heading}>{BRAND_NAME} Access</Text>
           <Text style={styles.body}>Admins are created manually in Cognito and sign in with their email address. Barbers can access the system only after being invited by an admin.</Text>
 
-          <TextInput style={styles.input} value={loginUsername} onChangeText={(value) => setLoginUsername(value.trim().toLowerCase())} placeholder="Email address" placeholderTextColor="#8a8f98" autoCapitalize="none" keyboardType="email-address" autoCorrect={false} />
+          <TextInput style={styles.input} value={loginIdentifier} onChangeText={(value) => setLoginIdentifier(value.trim().toLowerCase())} placeholder="Email address" placeholderTextColor="#8a8f98" autoCapitalize="none" keyboardType="email-address" autoCorrect={false} />
           {!needPasswordReset ? (
             <TextInput style={styles.input} value={loginPassword} onChangeText={setLoginPassword} placeholder="Password" placeholderTextColor="#8a8f98" autoCapitalize="none" secureTextEntry />
           ) : (

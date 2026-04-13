@@ -64,6 +64,8 @@ type RevenueForm = {
   notes: string;
 };
 
+const BRAND_NAME = 'White Beard';
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -135,6 +137,8 @@ const isSameMonth = (left: string, right: Date) => {
 export default function App() {
   const [ready, setReady] = useState(false);
   const [authUsername, setAuthUsername] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
+  const [authDisplayName, setAuthDisplayName] = useState<string | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
 
   const [profiles, setProfiles] = useState<BarberProfile[]>([]);
@@ -160,16 +164,29 @@ export default function App() {
   const [revenueForm, setRevenueForm] = useState<RevenueForm>(emptyRevenueForm());
   const [revenueMessage, setRevenueMessage] = useState('');
 
+  const syncAuthState = async () => {
+    const user = await getCurrentUser();
+    const session = await fetchAuthSession();
+    const accessPayload = session.tokens?.accessToken.payload ?? {};
+    const idPayload = session.tokens?.idToken?.payload ?? {};
+    const value = (accessPayload['cognito:groups'] as string[] | undefined) ?? [];
+    const email = typeof idPayload.email === 'string' ? idPayload.email : null;
+    const name = typeof idPayload.name === 'string' ? idPayload.name : null;
+
+    setAuthUsername(user.username);
+    setAuthEmail(email);
+    setAuthDisplayName(name ?? email ?? user.username);
+    setGroups(value);
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
-        const user = await getCurrentUser();
-        const session = await fetchAuthSession();
-        const value = (session.tokens?.accessToken.payload['cognito:groups'] as string[] | undefined) ?? [];
-        setAuthUsername(user.username);
-        setGroups(value);
+        await syncAuthState();
       } catch {
         setAuthUsername(null);
+        setAuthEmail(null);
+        setAuthDisplayName(null);
         setGroups([]);
       } finally {
         setReady(true);
@@ -260,9 +277,9 @@ export default function App() {
       ? {
           id: 'admin-bootstrap',
           cognitoUsername: authUsername,
-          fullName: authUsername,
-          username: authUsername,
-          email: '',
+          fullName: authDisplayName ?? authEmail ?? authUsername,
+          username: authEmail ?? authUsername,
+          email: authEmail ?? '',
           phone: '',
           role: 'ADMIN' as const,
           status: 'ACTIVE' as const,
@@ -291,11 +308,7 @@ export default function App() {
   }, [barbers, entries, today]);
 
   const refreshSession = async () => {
-    const user = await getCurrentUser();
-    const session = await fetchAuthSession();
-    const value = (session.tokens?.accessToken.payload['cognito:groups'] as string[] | undefined) ?? [];
-    setAuthUsername(user.username);
-    setGroups(value);
+    await syncAuthState();
   };
 
   const handleLogin = async () => {
@@ -342,6 +355,8 @@ export default function App() {
   const handleLogout = async () => {
     await signOut();
     setAuthUsername(null);
+    setAuthEmail(null);
+    setAuthDisplayName(null);
     setGroups([]);
   };
 
@@ -441,7 +456,7 @@ export default function App() {
     return (
       <View style={styles.centered}>
         <StatusBar style="light" />
-        <Text style={styles.title}>Loading BarberFlow...</Text>
+        <Text style={styles.title}>Loading {BRAND_NAME}...</Text>
       </View>
     );
   }
@@ -452,8 +467,8 @@ export default function App() {
         <StatusBar style="light" />
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.kicker}>Staff Login</Text>
-          <Text style={styles.heading}>No Sign Up, Invite Only</Text>
-          <Text style={styles.body}>Admin creates user accounts and sends an invitation email with a temporary password.</Text>
+          <Text style={styles.heading}>{BRAND_NAME} Access</Text>
+          <Text style={styles.body}>Admins are created manually in Cognito and sign in with their email address. Barbers can access the system only after being invited by an admin.</Text>
 
           <TextInput style={styles.input} value={loginUsername} onChangeText={(value) => setLoginUsername(value.trim().toLowerCase())} placeholder="Email address" placeholderTextColor="#8a8f98" autoCapitalize="none" keyboardType="email-address" autoCorrect={false} />
           {!needPasswordReset ? (
@@ -483,7 +498,7 @@ export default function App() {
       <View style={styles.centered}>
         <StatusBar style="light" />
         <Text style={styles.title}>Profile Sync In Progress</Text>
-        <Text style={styles.body}>Your account exists in Auth. Ask admin to create your profile if this persists.</Text>
+        <Text style={styles.body}>Your account exists in Auth. Admin users can continue without a profile. Barber users should ask an admin to complete the invitation flow if this persists.</Text>
       </View>
     );
   }
@@ -496,7 +511,8 @@ export default function App() {
           <View style={styles.rowBetween}>
             <View>
               <Text style={styles.kicker}>Admin Dashboard</Text>
-              <Text style={styles.heading}>Welcome {effectiveMe.fullName.split(' ')[0]}</Text>
+              <Text style={styles.heading}>{BRAND_NAME} Admin Console</Text>
+              <Text style={styles.body}>Welcome {effectiveMe.fullName.split(' ')[0]}. Admin accounts are created manually in Cognito and must be members of the admins group.</Text>
             </View>
             <Pressable style={styles.ghostButton} onPress={handleLogout}>
               <Text style={styles.ghostButtonText}>Logout</Text>
@@ -588,7 +604,7 @@ export default function App() {
 
           {adminTab === 'users' ? (
             <>
-              <Text style={styles.cardLabel}>Create Barber User</Text>
+              <Text style={styles.cardLabel}>Invite Barber</Text>
               <TextInput style={styles.input} value={inviteForm.fullName} onChangeText={(value) => setInviteForm((current) => ({ ...current, fullName: value }))} placeholder="Full name" placeholderTextColor="#8a8f98" />
               <TextInput style={styles.input} value={inviteForm.username} onChangeText={(value) => setInviteForm((current) => ({ ...current, username: value }))} placeholder="Username" placeholderTextColor="#8a8f98" autoCapitalize="none" />
               <TextInput style={styles.input} value={inviteForm.email} onChangeText={(value) => setInviteForm((current) => ({ ...current, email: value }))} placeholder="Email" placeholderTextColor="#8a8f98" autoCapitalize="none" />
@@ -612,6 +628,8 @@ export default function App() {
                   <Text style={styles.listMeta}>Login Link: {invitePreview.inviteLink}</Text>
                 </View>
               ) : null}
+
+              <Text style={styles.body}>Admins are not invited here. Create admin users directly in Cognito and add them to the admins group.</Text>
             </>
           ) : null}
         </ScrollView>
@@ -629,7 +647,7 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.rowBetween}>
           <View>
-            <Text style={styles.kicker}>Barber Workspace</Text>
+            <Text style={styles.kicker}>{BRAND_NAME} Barber Workspace</Text>
             <Text style={styles.heading}>{effectiveMe.fullName}</Text>
           </View>
           <Pressable style={styles.ghostButton} onPress={handleLogout}>

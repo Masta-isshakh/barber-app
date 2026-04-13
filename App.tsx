@@ -89,7 +89,7 @@ const emptyRevenueForm = (): RevenueForm => ({
   notes: '',
 });
 
-const parseInvite = (url: string | null): { username: string; password: string } | null => {
+const parseInvite = (url: string | null): { identifier: string; password: string } | null => {
   if (!url || !url.includes('?')) {
     return null;
   }
@@ -104,12 +104,14 @@ const parseInvite = (url: string | null): { username: string; password: string }
     return acc;
   }, {});
 
-  if (!params.username || !params.password) {
+  const identifier = params.email ?? params.username;
+
+  if (!identifier || !params.password) {
     return null;
   }
 
   return {
-    username: params.username,
+    identifier,
     password: params.password,
   };
 };
@@ -184,7 +186,7 @@ export default function App() {
         return;
       }
 
-      setLoginUsername(invite.username);
+      setLoginUsername(invite.identifier);
       setLoginPassword(invite.password);
       setLoginError('');
     };
@@ -451,9 +453,9 @@ export default function App() {
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={styles.kicker}>Staff Login</Text>
           <Text style={styles.heading}>No Sign Up, Invite Only</Text>
-          <Text style={styles.body}>Admin creates user accounts and sends invitation email with temporary password.</Text>
+          <Text style={styles.body}>Admin creates user accounts and sends an invitation email with a temporary password.</Text>
 
-          <TextInput style={styles.input} value={loginUsername} onChangeText={setLoginUsername} placeholder="Username" placeholderTextColor="#8a8f98" autoCapitalize="none" />
+          <TextInput style={styles.input} value={loginUsername} onChangeText={(value) => setLoginUsername(value.trim().toLowerCase())} placeholder="Email address" placeholderTextColor="#8a8f98" autoCapitalize="none" keyboardType="email-address" autoCorrect={false} />
           {!needPasswordReset ? (
             <TextInput style={styles.input} value={loginPassword} onChangeText={setLoginPassword} placeholder="Password" placeholderTextColor="#8a8f98" autoCapitalize="none" secureTextEntry />
           ) : (

@@ -72,6 +72,6 @@ export const handler = async (event: AppSyncEvent) => {
     temporaryPassword,
     username: normalizedUsername,
     email: trimmedEmail,
-    inviteLink: `${appLinkBase}?username=${encodeURIComponent(normalizedUsername)}`,
+    inviteLink: `${appLinkBase}?email=${encodeURIComponent(trimmedEmail)}`,
   };
 };

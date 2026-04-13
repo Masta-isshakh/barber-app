@@ -7,9 +7,11 @@ export const handler: CustomMessageTriggerHandler = async (event) => {
     return event;
   }
 
+  const email = event.request.userAttributes?.email ?? '';
   const username = event.request.usernameParameter ?? '{username}';
   const temporaryPassword = event.request.codeParameter ?? '{####}';
-  const loginLink = `${appLinkBase}?username=${username}&password=${temporaryPassword}`;
+  const signInIdentifier = email || username;
+  const loginLink = `${appLinkBase}?email=${encodeURIComponent(signInIdentifier)}&password=${encodeURIComponent(temporaryPassword)}`;
 
   event.response.emailSubject = 'Your BarberFlow account is ready';
   event.response.emailMessage = `
@@ -22,7 +24,9 @@ export const handler: CustomMessageTriggerHandler = async (event) => {
           <p style="margin: 20px 0;">
             <a href="${loginLink}" style="display: inline-block; background: #111827; color: #f8fafc; text-decoration: none; padding: 14px 20px; border-radius: 14px; font-weight: 700;">Open BarberFlow</a>
           </p>
-          <p style="margin: 0 0 8px; font-weight: 700;">Username</p>
+          <p style="margin: 0 0 8px; font-weight: 700;">Email</p>
+          <p style="margin: 0 0 14px; color: #0f172a;">${signInIdentifier}</p>
+          <p style="margin: 0 0 8px; font-weight: 700;">Internal username</p>
           <p style="margin: 0 0 14px; color: #0f172a;">${username}</p>
           <p style="margin: 0 0 8px; font-weight: 700;">Temporary password</p>
           <p style="margin: 0 0 14px; color: #0f172a;">${temporaryPassword}</p>

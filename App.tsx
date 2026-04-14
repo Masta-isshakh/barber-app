@@ -313,7 +313,8 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
-      const result = await signIn({ username: loginIdentifier.trim().toLowerCase(), password: loginPassword });
+        const normalizedPassword = loginPassword.trim();
+        const result = await signIn({ username: loginIdentifier.trim().toLowerCase(), password: normalizedPassword });
       if (result.nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
         setNeedPasswordReset(true);
         setLoginError('Set a new password to continue.');
@@ -337,13 +338,15 @@ export default function App() {
   };
 
   const handleResetPassword = async () => {
-    if (!newPassword.trim()) {
+    const normalizedNewPassword = newPassword.trim();
+
+    if (!normalizedNewPassword) {
       setLoginError('New password is required.');
       return;
     }
 
     try {
-      const result = await confirmSignIn({ challengeResponse: newPassword });
+      const result = await confirmSignIn({ challengeResponse: normalizedNewPassword });
       if (result.nextStep.signInStep !== 'DONE') {
         setLoginError(`Additional step required: ${result.nextStep.signInStep}`);
         return;

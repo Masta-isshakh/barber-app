@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "verify:release-config": "node scripts/verify-release-config.mjs",
+    "diagnose:admin-login": "node scripts/diagnose-admin-login.mjs",
     "backend:deploy": "ampx sandbox --once",
     "admin:bootstrap": "node scripts/bootstrap-admin.mjs",
     "build:android": "eas build --platform android --profile production",

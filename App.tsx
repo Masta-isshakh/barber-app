@@ -1,5 +1,6 @@
 ﻿import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
+import React from 'react';
 import {
   Linking,
   Pressable,
@@ -12,6 +13,8 @@ import {
 } from 'react-native';
 import { confirmSignIn, fetchAuthSession, getCurrentUser, signIn, signOut } from 'aws-amplify/auth';
 import { client } from './src/lib/amplify';
+import AppNavigator from './src/navigation/AppNavigator';
+import { AuthProvider } from './src/context/AuthContext';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER';
 type AdminTab = 'overview' | 'barbers' | 'reports' | 'users';
@@ -512,183 +515,15 @@ export default function App() {
   }
 
   if (isAdmin) {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <StatusBar style="light" />
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.rowBetween}>
-            <View>
-              <Text style={styles.kicker}>Admin Dashboard</Text>
-              <Text style={styles.heading}>{BRAND_NAME} Admin Console</Text>
-              <Text style={styles.body}>Welcome {effectiveMe.fullName.split(' ')[0]}. Admin accounts are created manually in Cognito and must be members of the admins group.</Text>
-            </View>
-            <Pressable style={styles.ghostButton} onPress={handleLogout}>
-              <Text style={styles.ghostButtonText}>Logout</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.tabs}>
-            {(['overview', 'barbers', 'reports', 'users'] as AdminTab[]).map((tab) => (
-              <Pressable key={tab} style={[styles.tab, adminTab === tab && styles.tabActive]} onPress={() => setAdminTab(tab)}>
-                <Text style={[styles.tabText, adminTab === tab && styles.tabTextActive]}>{tab.toUpperCase()}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {adminTab === 'overview' ? (
-            <>
-              <View style={styles.grid}>
-                <View style={styles.card}><Text style={styles.cardLabel}>Today</Text><Text style={styles.cardValue}>{formatCurrency(sum(todayEntries))}</Text></View>
-                <View style={styles.card}><Text style={styles.cardLabel}>This Month</Text><Text style={styles.cardValue}>{formatCurrency(sum(monthEntries))}</Text></View>
-                <View style={styles.card}><Text style={styles.cardLabel}>Services Today</Text><Text style={styles.cardValue}>{todayEntries.length}</Text></View>
-                <View style={styles.card}><Text style={styles.cardLabel}>Top Performer</Text><Text style={styles.cardValue}>{topPerformer?.barber.fullName ?? 'N/A'}</Text></View>
-              </View>
-            </>
-          ) : null}
-
-          {adminTab === 'barbers' ? (
-            <>
-              {barbers.map((barber) => {
-                const barberEntries = entries.filter((entry) => entry.barberId === barber.id);
-                const barberMonth = barberEntries.filter((entry) => isSameMonth(entry.earnedAt, today));
-                return (
-                  <Pressable key={barber.id} style={styles.listRow} onPress={() => setSelectedBarberId(barber.id)}>
-                    <View>
-                      <Text style={styles.listTitle}>{barber.fullName}</Text>
-                      <Text style={styles.listMeta}>{barber.specialty} · {barber.shiftLabel}</Text>
-                    </View>
-                    <Text style={styles.listValue}>{formatCurrency(sum(barberMonth))}</Text>
-                  </Pressable>
-                );
-              })}
-
-              {selectedBarber ? (
-                <View style={styles.cardBlock}>
-                  <Text style={styles.cardLabel}>Selected Barber Profile</Text>
-                  <Text style={styles.listTitle}>{selectedBarber.fullName}</Text>
-                  <Text style={styles.listMeta}>Username: {selectedBarber.username}</Text>
-                  <Text style={styles.listMeta}>Email: {selectedBarber.email}</Text>
-                  <Text style={styles.listMeta}>Phone: {selectedBarber.phone || '-'}</Text>
-                  <Text style={styles.listMeta}>Commission: {selectedBarber.commissionRate}%</Text>
-                  <Text style={styles.listMeta}>Status: {selectedBarber.status}</Text>
-                </View>
-              ) : null}
-            </>
-          ) : null}
-
-          {adminTab === 'reports' ? (
-            <>
-              <View style={styles.tabs}>
-                {(['daily', 'monthly'] as ReportTab[]).map((tab) => (
-                  <Pressable key={tab} style={[styles.tab, reportTab === tab && styles.tabActive]} onPress={() => setReportTab(tab)}>
-                    <Text style={[styles.tabText, reportTab === tab && styles.tabTextActive]}>{tab.toUpperCase()}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {reportTab === 'daily'
-                ? [...new Set(entries.map((entry) => entry.earnedAt.slice(0, 10)))].sort().reverse().map((day) => {
-                    const dayEntries = entries.filter((entry) => entry.earnedAt.startsWith(day));
-                    return (
-                      <View key={day} style={styles.cardBlock}>
-                        <Text style={styles.listTitle}>{day}</Text>
-                        <Text style={styles.listValue}>{formatCurrency(sum(dayEntries))}</Text>
-                        <Text style={styles.listMeta}>{dayEntries.length} services</Text>
-                      </View>
-                    );
-                  })
-                : [...new Set(entries.map((entry) => entry.earnedAt.slice(0, 7)))].sort().reverse().map((month) => {
-                    const monthRows = entries.filter((entry) => entry.earnedAt.startsWith(month));
-                    return (
-                      <View key={month} style={styles.cardBlock}>
-                        <Text style={styles.listTitle}>{month}</Text>
-                        <Text style={styles.listValue}>{formatCurrency(sum(monthRows))}</Text>
-                        <Text style={styles.listMeta}>{monthRows.length} services</Text>
-                      </View>
-                    );
-                  })}
-            </>
-          ) : null}
-
-          {adminTab === 'users' ? (
-            <>
-              <Text style={styles.cardLabel}>Invite Barber</Text>
-              <TextInput style={styles.input} value={inviteForm.fullName} onChangeText={(value) => setInviteForm((current) => ({ ...current, fullName: value }))} placeholder="Full name" placeholderTextColor="#8a8f98" />
-              <TextInput style={styles.input} value={inviteForm.username} onChangeText={(value) => setInviteForm((current) => ({ ...current, username: value }))} placeholder="Username" placeholderTextColor="#8a8f98" autoCapitalize="none" />
-              <TextInput style={styles.input} value={inviteForm.email} onChangeText={(value) => setInviteForm((current) => ({ ...current, email: value }))} placeholder="Email" placeholderTextColor="#8a8f98" autoCapitalize="none" />
-              <TextInput style={styles.input} value={inviteForm.phone} onChangeText={(value) => setInviteForm((current) => ({ ...current, phone: value }))} placeholder="Phone" placeholderTextColor="#8a8f98" />
-              <TextInput style={styles.input} value={inviteForm.specialty} onChangeText={(value) => setInviteForm((current) => ({ ...current, specialty: value }))} placeholder="Specialty" placeholderTextColor="#8a8f98" />
-              <TextInput style={styles.input} value={inviteForm.shiftLabel} onChangeText={(value) => setInviteForm((current) => ({ ...current, shiftLabel: value }))} placeholder="Shift label" placeholderTextColor="#8a8f98" />
-              <TextInput style={styles.input} value={inviteForm.commissionRate} onChangeText={(value) => setInviteForm((current) => ({ ...current, commissionRate: value }))} placeholder="Commission %" placeholderTextColor="#8a8f98" keyboardType="numeric" />
-              <TextInput style={[styles.input, styles.multiline]} value={inviteForm.bio} onChangeText={(value) => setInviteForm((current) => ({ ...current, bio: value }))} placeholder="Bio" placeholderTextColor="#8a8f98" multiline />
-
-              {inviteMessage ? <Text style={styles.success}>{inviteMessage}</Text> : null}
-
-              <Pressable style={styles.primaryButton} onPress={handleInviteBarber}>
-                <Text style={styles.primaryButtonText}>Send Invitation</Text>
-              </Pressable>
-
-              {invitePreview ? (
-                <View style={styles.cardBlock}>
-                  <Text style={styles.listTitle}>Invitation Sent</Text>
-                  <Text style={styles.listMeta}>Email: {invitePreview.email}</Text>
-                  <Text style={styles.listMeta}>Username: {invitePreview.username}</Text>
-                  <Text style={styles.listMeta}>Login Link: {invitePreview.inviteLink}</Text>
-                </View>
-              ) : null}
-
-              <Text style={styles.body}>Admins are not invited here. Create admin users directly in Cognito and add them to the admins group.</Text>
-            </>
-          ) : null}
-        </ScrollView>
-      </SafeAreaView>
-    );
+    // fall through to main app for both admin and barber
   }
 
-  const myEntries = entries.filter((entry) => entry.cognitoUsername === effectiveMe.cognitoUsername);
-  const myToday = myEntries.filter((entry) => isSameDay(entry.earnedAt, today));
-  const myMonth = myEntries.filter((entry) => isSameMonth(entry.earnedAt, today));
-
+  // ── Authenticated: render the full app ──────────────────────────────────
   return (
-    <SafeAreaView style={styles.screen}>
+    <AuthProvider value={{ authUsername, authDisplayName, groups, isAdmin, onLogout: handleLogout }}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.rowBetween}>
-          <View>
-            <Text style={styles.kicker}>{BRAND_NAME} Barber Workspace</Text>
-            <Text style={styles.heading}>{effectiveMe.fullName}</Text>
-          </View>
-          <Pressable style={styles.ghostButton} onPress={handleLogout}>
-            <Text style={styles.ghostButtonText}>Logout</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.grid}>
-          <View style={styles.card}><Text style={styles.cardLabel}>Today</Text><Text style={styles.cardValue}>{formatCurrency(sum(myToday))}</Text></View>
-          <View style={styles.card}><Text style={styles.cardLabel}>This Month</Text><Text style={styles.cardValue}>{formatCurrency(sum(myMonth))}</Text></View>
-          <View style={styles.card}><Text style={styles.cardLabel}>Today Services</Text><Text style={styles.cardValue}>{myToday.length}</Text></View>
-          <View style={styles.card}><Text style={styles.cardLabel}>Month Services</Text><Text style={styles.cardValue}>{myMonth.length}</Text></View>
-        </View>
-
-        <Text style={styles.cardLabel}>Log Revenue After Each Haircut</Text>
-        <TextInput style={styles.input} value={revenueForm.amount} onChangeText={(value) => setRevenueForm((current) => ({ ...current, amount: value }))} placeholder="Amount" placeholderTextColor="#8a8f98" keyboardType="decimal-pad" />
-        <TextInput style={styles.input} value={revenueForm.serviceLabel} onChangeText={(value) => setRevenueForm((current) => ({ ...current, serviceLabel: value }))} placeholder="Service name" placeholderTextColor="#8a8f98" />
-        <View style={styles.tabs}>
-          {(['CASH', 'CARD', 'TRANSFER'] as PaymentMethod[]).map((method) => (
-            <Pressable key={method} style={[styles.tab, revenueForm.paymentMethod === method && styles.tabActive]} onPress={() => setRevenueForm((current) => ({ ...current, paymentMethod: method }))}>
-              <Text style={[styles.tabText, revenueForm.paymentMethod === method && styles.tabTextActive]}>{method}</Text>
-            </Pressable>
-          ))}
-        </View>
-        <TextInput style={[styles.input, styles.multiline]} value={revenueForm.notes} onChangeText={(value) => setRevenueForm((current) => ({ ...current, notes: value }))} placeholder="Notes" placeholderTextColor="#8a8f98" multiline />
-
-        {revenueMessage ? <Text style={styles.success}>{revenueMessage}</Text> : null}
-
-        <Pressable style={styles.primaryButton} onPress={handleLogRevenue}>
-          <Text style={styles.primaryButtonText}>Save Revenue</Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+      <AppNavigator />
+    </AuthProvider>
   );
 }
 

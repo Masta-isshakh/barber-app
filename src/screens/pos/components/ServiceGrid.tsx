@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Dimensions,
   FlatList,
   Pressable,
   StyleSheet,
@@ -22,11 +23,20 @@ const CATEGORIES: (ServiceCategory | 'ALL')[] = [
 ];
 
 export default function ServiceGrid({ services, onAdd, activeCategory, onCategoryChange }: Props) {
+  const width = Dimensions.get('window').width;
+  const isTabletLandscape = width >= 1024;
+  const numColumns = isTabletLandscape ? 4 : width >= 700 ? 3 : 2;
+
   const filtered =
     activeCategory === 'ALL' ? services : services.filter((s) => s.category === activeCategory);
 
   return (
     <View style={styles.container}>
+      <View style={styles.topBar}>
+        <Text style={styles.sectionTitle}>Services</Text>
+        <Text style={styles.sectionSub}>{filtered.length} active items</Text>
+      </View>
+
       {/* Category pills */}
       <FlatList
         horizontal
@@ -40,7 +50,7 @@ export default function ServiceGrid({ services, onAdd, activeCategory, onCategor
             style={[styles.catPill, activeCategory === cat && styles.catPillActive]}
           >
             <Text style={[styles.catPillText, activeCategory === cat && styles.catPillTextActive]}>
-              {cat === 'ALL' ? '🔠 All' : `${CATEGORY_ICONS[cat]} ${CATEGORY_LABELS[cat]}`}
+              {cat === 'ALL' ? 'All' : `${CATEGORY_ICONS[cat]} ${CATEGORY_LABELS[cat]}`}
             </Text>
           </Pressable>
         )}
@@ -50,17 +60,23 @@ export default function ServiceGrid({ services, onAdd, activeCategory, onCategor
       <FlatList
         data={filtered}
         keyExtractor={(s) => s.id}
-        numColumns={3}
-        contentContainerStyle={styles.grid}
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? styles.rowWrap : undefined}
+        contentContainerStyle={[styles.grid, isTabletLandscape && styles.gridTablet]}
         renderItem={({ item: service }) => (
           <Pressable
             onPress={() => onAdd(service)}
             style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
           >
-            <Text style={styles.tileIcon}>{CATEGORY_ICONS[service.category]}</Text>
+            <View style={styles.tileHeader}>
+              <Text style={styles.tileIcon}>{CATEGORY_ICONS[service.category]}</Text>
+              <Text style={styles.tileCategory}>{CATEGORY_LABELS[service.category]}</Text>
+            </View>
             <Text style={styles.tileName} numberOfLines={2}>{service.name}</Text>
-            <Text style={styles.tilePrice}>QR {service.price}</Text>
-            <Text style={styles.tileDuration}>{service.durationMinutes} min</Text>
+            <View style={styles.tileFooter}>
+              <Text style={styles.tileDuration}>{service.durationMinutes} min</Text>
+              <Text style={styles.tilePrice}>QR {service.price}</Text>
+            </View>
           </Pressable>
         )}
         ListEmptyComponent={
@@ -75,37 +91,60 @@ export default function ServiceGrid({ services, onAdd, activeCategory, onCategor
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  catRow: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.xs },
+  topBar: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xs,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  sectionTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.3 },
+  sectionSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
+  catRow: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, gap: SPACING.xs },
   catPill: {
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 2,
+    paddingVertical: 8,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   catPillActive: { backgroundColor: COLORS.accent },
-  catPillText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  catPillText: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
   catPillTextActive: { color: COLORS.primary },
-  grid: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.xl, gap: SPACING.sm },
+  grid: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xl, paddingTop: SPACING.xs },
+  gridTablet: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.md },
+  rowWrap: { gap: SPACING.sm },
   tile: {
     flex: 1,
-    margin: SPACING.xs,
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    alignItems: 'center',
-    minHeight: 100,
-    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    minHeight: 132,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#EDEEF2',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  tilePressed: { opacity: 0.75, transform: [{ scale: 0.97 }] },
-  tileIcon: { fontSize: 24, marginBottom: 4 },
-  tileName: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
-  tilePrice: { fontSize: 13, fontWeight: '800', color: COLORS.accent, marginTop: 2 },
-  tileDuration: { fontSize: 10, color: COLORS.textMuted, marginTop: 1 },
+  tilePressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
+  tileHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xs },
+  tileIcon: { fontSize: 18 },
+  tileCategory: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  tileName: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary, lineHeight: 20, marginBottom: SPACING.sm },
+  tileFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  tilePrice: { fontSize: 18, fontWeight: '900', color: COLORS.accent },
+  tileDuration: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 40 },
   emptyText: { color: COLORS.textMuted },
 });

@@ -12,7 +12,7 @@ import { getCurrentUser } from 'aws-amplify/auth';
 import { client } from '../../lib/amplify';
 import { useBarbers } from '../../hooks/useBarbers';
 import { useServices } from '../../hooks/useServices';
-import { COLORS, SPACING } from '../../constants/colors';
+import { COLORS, RADIUS, SPACING } from '../../constants/colors';
 import ServiceGrid from './components/ServiceGrid';
 import CartPanel from './components/CartPanel';
 import PaymentModal from './components/PaymentModal';
@@ -248,7 +248,10 @@ export default function POSScreen() {
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>White Beard POS</Text>
+        <View>
+          <Text style={styles.headerKicker}>Cashier Workspace</Text>
+          <Text style={styles.headerTitle}>White Beard POS</Text>
+        </View>
         {processingPayment && <ActivityIndicator color={COLORS.accent} />}
       </View>
 
@@ -329,22 +332,39 @@ export default function POSScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.bg },
+  root: { flex: 1, backgroundColor: '#EEF0F3' },
   loadingScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm },
   loadingText: { color: COLORS.textSecondary, fontSize: 14 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     backgroundColor: COLORS.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2F4E',
   },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.accent, letterSpacing: 1 },
+  headerKicker: { fontSize: 11, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: COLORS.accent, letterSpacing: 0.6, marginTop: 2 },
   body: { flex: 1 },
-  bodyWide: { flexDirection: 'row' },
-  servicesWide: { flex: 1 },
+  bodyWide: { flexDirection: 'row', padding: SPACING.md, gap: SPACING.md },
+  servicesWide: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E4E7EC',
+  },
   servicesFull: { flex: 1 },
-  cartSidePanel: { width: 320, borderLeftWidth: 1, borderLeftColor: COLORS.border },
+  cartSidePanel: {
+    width: 360,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E4E7EC',
+  },
   cartBottomBar: { maxHeight: 420, borderTopWidth: 1, borderTopColor: COLORS.border },
 });

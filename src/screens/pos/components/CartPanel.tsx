@@ -42,6 +42,11 @@ export default function CartPanel({
 
   return (
     <View style={styles.container}>
+      <View style={styles.ticketHeader}>
+        <Text style={styles.ticketTitle}>Current Ticket</Text>
+        <Text style={styles.ticketSub}>{cart.length} lines</Text>
+      </View>
+
       {/* Barber selector */}
       <Text style={styles.sectionLabel}>Barber</Text>
       <FlatList
@@ -66,6 +71,7 @@ export default function CartPanel({
               >
                 {b.fullName.split(' ')[0]}
               </Text>
+              {isSelected ? <Text style={styles.selectedMark}>Selected</Text> : null}
             </Pressable>
           );
         }}
@@ -152,7 +158,7 @@ export default function CartPanel({
         style={[styles.chargeBtn, cart.length === 0 && styles.chargeBtnDisabled, !selectedBarber && cart.length > 0 && styles.chargeBtnNeedsBarber]}
       >
         <Text style={styles.chargeBtnText}>
-          {!selectedBarber ? 'Select a barber first' : `Charge QR ${total}`}
+          {!selectedBarber ? 'Select a barber first' : `Proceed to payment · QR ${total}`}
         </Text>
       </Pressable>
     </View>
@@ -160,32 +166,36 @@ export default function CartPanel({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.card, padding: SPACING.md },
+  container: { flex: 1, backgroundColor: COLORS.card, paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.md },
+  ticketHeader: { marginBottom: SPACING.xs },
+  ticketTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.2 },
+  ticketSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginTop: SPACING.sm,
     marginBottom: SPACING.xs,
   },
-  barberRow: { gap: SPACING.xs, paddingBottom: SPACING.xs },
+  barberRow: { gap: SPACING.xs, paddingBottom: SPACING.sm },
   barberChip: {
     alignItems: 'center',
-    width: 64,
-    paddingVertical: SPACING.xs,
+    width: 84,
+    paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#FAFAFB',
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   barberInitial: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
     color: COLORS.primary,
   },
-  barberChipName: { fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  barberChipName: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2, fontWeight: '700' },
+  selectedMark: { marginTop: 4, fontSize: 9, color: '#fff', fontWeight: '800', textTransform: 'uppercase' },
   emptyText: { color: COLORS.textMuted, fontSize: 12 },
   emptyCart: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 80 },
   emptyCartText: { color: COLORS.textMuted, fontSize: 13 },
@@ -199,8 +209,8 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   cartInfo: { flex: 1 },
-  cartName: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
-  cartPrice: { fontSize: 11, color: COLORS.textMuted },
+  cartName: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
+  cartPrice: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   qtyBtn: {
     width: 24,
@@ -214,7 +224,7 @@ const styles = StyleSheet.create({
   },
   qtyBtnText: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '700' },
   qtyText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, minWidth: 16, textAlign: 'center' },
-  cartLineTotal: { fontSize: 13, fontWeight: '700', color: COLORS.accent, minWidth: 50, textAlign: 'right' },
+  cartLineTotal: { fontSize: 14, fontWeight: '800', color: COLORS.accent, minWidth: 56, textAlign: 'right' },
   removeBtn: { padding: 4 },
   removeBtnText: { color: COLORS.error, fontSize: 12, fontWeight: '700' },
   discountRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginBottom: SPACING.sm },
@@ -236,15 +246,15 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  totalLabel: { fontSize: 13, color: COLORS.textSecondary },
-  totalValue: { fontSize: 13, color: COLORS.textPrimary, fontWeight: '600' },
+  totalLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
+  totalValue: { fontSize: 14, color: COLORS.textPrimary, fontWeight: '700' },
   grandTotalRow: { marginTop: SPACING.xs },
-  grandTotalLabel: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
-  grandTotalValue: { fontSize: 18, fontWeight: '900', color: COLORS.accent },
+  grandTotalLabel: { fontSize: 17, fontWeight: '900', color: COLORS.primary },
+  grandTotalValue: { fontSize: 22, fontWeight: '900', color: COLORS.accent },
   chargeBtn: {
     marginTop: SPACING.md,
     backgroundColor: COLORS.accent,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.lg,
     paddingVertical: SPACING.md,
     alignItems: 'center',
   },
@@ -254,5 +264,5 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.warning,
   },
-  chargeBtnText: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
+  chargeBtnText: { fontSize: 15, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.2 },
 });

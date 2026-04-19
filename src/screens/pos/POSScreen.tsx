@@ -212,6 +212,27 @@ export default function POSScreen() {
     setCompletedSale(null);
   }
 
+  function handleChargePress() {
+    if (cart.items.length === 0) {
+      Alert.alert('Cart is empty', 'Add at least one service before charging.');
+      return;
+    }
+
+    if (!cart.selectedBarber) {
+      if (barbers.length === 0) {
+        Alert.alert('No active barbers', 'Activate a barber profile before processing sales.');
+        return;
+      }
+
+      const fallbackBarber = barbers[0];
+      setCart((prev) => ({ ...prev, selectedBarber: fallbackBarber }));
+      Alert.alert('Barber selected', `${fallbackBarber.fullName} selected. Tap charge again to continue.`);
+      return;
+    }
+
+    setPaymentVisible(true);
+  }
+
   // ── Loading ───────────────────────────────────────────────────────────────
   if (barbersLoading || servicesLoading) {
     return (
@@ -227,7 +248,7 @@ export default function POSScreen() {
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>💈 White Beard POS</Text>
+        <Text style={styles.headerTitle}>White Beard POS</Text>
         {processingPayment && <ActivityIndicator color={COLORS.accent} />}
       </View>
 
@@ -255,7 +276,7 @@ export default function POSScreen() {
               onRemove={remove}
               discountPercent={cart.discountPercent}
               onDiscountChange={setDiscount}
-              onCharge={() => setPaymentVisible(true)}
+              onCharge={handleChargePress}
             />
           </View>
         ) : (
@@ -271,7 +292,7 @@ export default function POSScreen() {
               onRemove={remove}
               discountPercent={cart.discountPercent}
               onDiscountChange={setDiscount}
-              onCharge={() => setPaymentVisible(true)}
+              onCharge={handleChargePress}
             />
           </View>
         )}

@@ -34,11 +34,11 @@ export const handler = async (event: AppSyncEvent) => {
   }
 
   const args = event.arguments;
-  const normalizedUsername = args.username.trim().toLowerCase();
   const trimmedEmail = args.email.trim().toLowerCase();
+  const normalizedUsername = trimmedEmail;
   const fullName = args.fullName.trim();
 
-  if (!fullName || !normalizedUsername || !trimmedEmail || !args.specialty.trim()) {
+  if (!fullName || !trimmedEmail || !args.specialty.trim()) {
     throw new Error('Missing required invitation fields.');
   }
 

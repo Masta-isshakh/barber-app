@@ -148,8 +148,8 @@ export default function CartPanel({
       {/* Charge button */}
       <Pressable
         onPress={onCharge}
-        disabled={cart.length === 0 || !selectedBarber}
-        style={[styles.chargeBtn, (cart.length === 0 || !selectedBarber) && styles.chargeBtnDisabled]}
+        disabled={cart.length === 0}
+        style={[styles.chargeBtn, cart.length === 0 && styles.chargeBtnDisabled, !selectedBarber && cart.length > 0 && styles.chargeBtnNeedsBarber]}
       >
         <Text style={styles.chargeBtnText}>
           {!selectedBarber ? 'Select a barber first' : `Charge QR ${total}`}
@@ -249,5 +249,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chargeBtnDisabled: { backgroundColor: COLORS.border },
+  chargeBtnNeedsBarber: {
+    backgroundColor: '#FFF6E6',
+    borderWidth: 1.5,
+    borderColor: COLORS.warning,
+  },
   chargeBtnText: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
 });

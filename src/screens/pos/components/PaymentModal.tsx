@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS, RADIUS, SPACING } from '../../../constants/colors';
 import type { PaymentMethod } from '../../../types';
 
@@ -19,11 +20,11 @@ type Props = {
   onCancel: () => void;
 };
 
-const METHODS: { key: PaymentMethod; label: string; icon: string; desc: string }[] = [
-  { key: 'CASH', label: 'Cash', icon: '💵', desc: 'Physical banknotes' },
-  { key: 'CARD', label: 'Card', icon: '💳', desc: 'VPOS / SoftPOS terminal' },
-  { key: 'QR', label: 'QR Pay', icon: '📱', desc: 'NAPS / Apple/Google Pay' },
-  { key: 'SPLIT', label: 'Split', icon: '50/50', desc: 'Cash + Card' },
+const METHODS: { key: PaymentMethod; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
+  { key: 'CASH', label: 'Cash', icon: 'cash-outline', desc: 'Physical banknotes' },
+  { key: 'CARD', label: 'Card', icon: 'card-outline', desc: 'VPOS / SoftPOS terminal' },
+  { key: 'QR', label: 'QR Pay', icon: 'qr-code-outline', desc: 'NAPS / Apple/Google Pay' },
+  { key: 'SPLIT', label: 'Split', icon: 'git-compare-outline', desc: 'Cash + Card' },
 ];
 
 export default function PaymentModal({ visible, total, onConfirm, onCancel }: Props) {
@@ -65,7 +66,12 @@ export default function PaymentModal({ visible, total, onConfirm, onCancel }: Pr
                 onPress={() => setSelectedMethod(m.key)}
                 style={[styles.methodCard, selectedMethod === m.key && styles.methodCardActive]}
               >
-                <Text style={styles.methodIcon}>{m.icon}</Text>
+                  <Ionicons
+                    name={m.icon}
+                    size={22}
+                    color={selectedMethod === m.key ? COLORS.accent : COLORS.textSecondary}
+                    style={styles.methodIcon}
+                  />
                 <Text style={[styles.methodLabel, selectedMethod === m.key && styles.methodLabelActive]}>
                   {m.label}
                 </Text>
@@ -176,15 +182,15 @@ const styles = StyleSheet.create({
   methodCard: {
     flex: 1,
     minWidth: '44%',
-    backgroundColor: COLORS.bg,
+    backgroundColor: '#FAFAFB',
     borderRadius: RADIUS.md,
-    padding: SPACING.sm,
+    padding: SPACING.md,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
   },
-  methodCardActive: { borderColor: COLORS.accent, backgroundColor: '#FFF9EA' },
-  methodIcon: { fontSize: 24, marginBottom: 4 },
+  methodCardActive: { borderColor: COLORS.accent, backgroundColor: '#FFF9EA', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
+  methodIcon: { marginBottom: 6 },
   methodLabel: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   methodLabelActive: { color: COLORS.accent },
   methodDesc: { fontSize: 10, color: COLORS.textMuted, textAlign: 'center', marginTop: 2 },

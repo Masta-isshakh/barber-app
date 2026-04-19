@@ -39,12 +39,6 @@ export default function UsersScreen() {
   const [preview, setPreview] = useState<{ username: string; email: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function deriveUsernameFromEmail(email: string) {
-    const localPart = email.split('@')[0] ?? '';
-    const sanitized = localPart.toLowerCase().replace(/[^a-z0-9._-]/g, '');
-    return sanitized || `barber${Date.now().toString().slice(-6)}`;
-  }
-
   async function handleInviteBarber() {
     if (!inviteForm.fullName.trim() || !inviteForm.email.trim() || !inviteForm.specialty.trim()) {
       setMessage('Full name, email, and specialty are required.');
@@ -55,7 +49,7 @@ export default function UsersScreen() {
     setMessage('');
     setPreview(null);
     const normalizedEmail = inviteForm.email.trim().toLowerCase();
-    const generatedUsername = deriveUsernameFromEmail(normalizedEmail);
+    const generatedUsername = normalizedEmail;
 
     try {
       const result = await client.mutations.inviteBarber({

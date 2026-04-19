@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import {
   ActivityIndicator,
   Pressable,
@@ -38,6 +40,8 @@ export default function UsersScreen() {
   const [message, setMessage] = useState('');
   const [preview, setPreview] = useState<{ username: string; email: string } | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const navigation = useNavigation<BottomTabNavigationProp<{ Barbers: undefined; [key: string]: undefined }>>();
 
   async function handleInviteBarber() {
     if (!inviteForm.fullName.trim() || !inviteForm.email.trim() || !inviteForm.specialty.trim()) {
@@ -129,6 +133,9 @@ export default function UsersScreen() {
       });
       setMessage('Invitation sent by email. The user will receive username and temporary password in inbox.');
       setInviteForm(emptyInviteForm());
+
+        // Navigate to Barbers tab so the new profile is immediately visible
+        navigation.navigate('Barbers');
 
       await writeAuditLog({
         action: 'INVITE_BARBER_SENT',

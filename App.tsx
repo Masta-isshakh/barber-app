@@ -364,11 +364,16 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await signOut();
-    setAuthUsername(null);
-    setAuthEmail(null);
-    setAuthDisplayName(null);
-    setGroups([]);
+    try {
+      await signOut();
+    } catch {
+      // ignore signOut errors (e.g. already signed out)
+    } finally {
+      setAuthUsername(null);
+      setAuthEmail(null);
+      setAuthDisplayName(null);
+      setGroups([]);
+    }
   };
 
   const handleInviteBarber = async () => {

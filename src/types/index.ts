@@ -139,6 +139,7 @@ export type AdminTabParamList = {
   Services: undefined;
   Shifts: undefined;
   Users: undefined;
+  Audit: undefined;
   Account: undefined;
 };
 

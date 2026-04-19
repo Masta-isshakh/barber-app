@@ -1,25 +1,20 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Linking,
   Pressable,
   SafeAreaView,
-  Share,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { client } from '../../lib/amplify';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
 import { writeAuditLog } from '../../lib/audit';
 
 type InviteForm = {
   fullName: string;
-  username: string;
   email: string;
   phone: string;
   specialty: string;
@@ -30,7 +25,6 @@ type InviteForm = {
 
 const emptyInviteForm = (): InviteForm => ({
   fullName: '',
-  username: '',
   email: '',
   phone: '',
   specialty: '',
@@ -42,24 +36,32 @@ const emptyInviteForm = (): InviteForm => ({
 export default function UsersScreen() {
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm());
   const [message, setMessage] = useState('');
-  const [preview, setPreview] = useState<{ username: string; email: string; inviteLink: string } | null>(null);
+  const [preview, setPreview] = useState<{ username: string; email: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
+  function deriveUsernameFromEmail(email: string) {
+    const localPart = email.split('@')[0] ?? '';
+    const sanitized = localPart.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    return sanitized || `barber${Date.now().toString().slice(-6)}`;
+  }
+
   async function handleInviteBarber() {
-    if (!inviteForm.fullName.trim() || !inviteForm.username.trim() || !inviteForm.email.trim() || !inviteForm.specialty.trim()) {
-      setMessage('Full name, username, email, and specialty are required.');
+    if (!inviteForm.fullName.trim() || !inviteForm.email.trim() || !inviteForm.specialty.trim()) {
+      setMessage('Full name, email, and specialty are required.');
       return;
     }
 
     setSaving(true);
     setMessage('');
     setPreview(null);
+    const normalizedEmail = inviteForm.email.trim().toLowerCase();
+    const generatedUsername = deriveUsernameFromEmail(normalizedEmail);
 
     try {
       const result = await client.mutations.inviteBarber({
         fullName: inviteForm.fullName.trim(),
-        username: inviteForm.username.trim().toLowerCase(),
-        email: inviteForm.email.trim().toLowerCase(),
+        username: generatedUsername,
+        email: normalizedEmail,
         phone: inviteForm.phone.trim() || undefined,
         specialty: inviteForm.specialty.trim(),
         shiftLabel: inviteForm.shiftLabel.trim() || undefined,
@@ -77,7 +79,7 @@ export default function UsersScreen() {
           status: 'FAILED',
           severity: 'ERROR',
           message: result.errors[0].message ?? 'Invitation failed',
-          metadata: { email: inviteForm.email.trim().toLowerCase() },
+          metadata: { email: normalizedEmail },
         });
         return;
       }
@@ -91,7 +93,7 @@ export default function UsersScreen() {
           status: 'FAILED',
           severity: 'ERROR',
           message: 'Invitation failed: no response from backend',
-          metadata: { email: inviteForm.email.trim().toLowerCase() },
+          metadata: { email: normalizedEmail },
         });
         return;
       }
@@ -130,9 +132,8 @@ export default function UsersScreen() {
       setPreview({
         username: result.data.username,
         email: result.data.email,
-        inviteLink: result.data.inviteLink,
       });
-      setMessage('Invitation sent successfully.');
+      setMessage('Invitation sent by email. The user will receive username and temporary password in inbox.');
       setInviteForm(emptyInviteForm());
 
       await writeAuditLog({
@@ -163,31 +164,20 @@ export default function UsersScreen() {
     }
   }
 
-  async function handleCopyInviteLink() {
-    if (!preview?.inviteLink) return;
-    await Clipboard.setStringAsync(preview.inviteLink);
-    Alert.alert('Copied', 'Invite link copied to clipboard.');
-  }
-
-  async function handleShareWhatsApp() {
-    if (!preview?.inviteLink) return;
-    const msg = `Welcome to White Beard! Use this invitation link to set your password and access the app:\n${preview.inviteLink}`;
-    const waUrl = `whatsapp://send?text=${encodeURIComponent(msg)}`;
-    const canOpen = await Linking.canOpenURL(waUrl);
-    if (canOpen) {
-      await Linking.openURL(waUrl);
-      return;
-    }
-    await Share.share({ message: msg, title: 'Barber Invitation' });
-  }
-
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>User Invitations</Text>
+        <Text style={styles.headerTitle}>Invite Barber by Email</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.heroCard}>
+          <Text style={styles.heroTitle}>Professional onboarding flow</Text>
+          <Text style={styles.heroText}>
+            Fill the form and click Send Invitation. Cognito sends an email containing username and temporary password automatically.
+          </Text>
+        </View>
+
         <Text style={styles.label}>Full Name</Text>
         <TextInput
           style={styles.input}
@@ -195,16 +185,6 @@ export default function UsersScreen() {
           onChangeText={(value) => setInviteForm((current) => ({ ...current, fullName: value }))}
           placeholder="Barber full name"
           placeholderTextColor={COLORS.textMuted}
-        />
-
-        <Text style={styles.label}>Username</Text>
-        <TextInput
-          style={styles.input}
-          value={inviteForm.username}
-          onChangeText={(value) => setInviteForm((current) => ({ ...current, username: value }))}
-          placeholder="barber.username"
-          placeholderTextColor={COLORS.textMuted}
-          autoCapitalize="none"
         />
 
         <Text style={styles.label}>Email</Text>
@@ -277,16 +257,7 @@ export default function UsersScreen() {
             <Text style={styles.previewTitle}>Invitation Sent</Text>
             <Text style={styles.previewText}>Email: {preview.email}</Text>
             <Text style={styles.previewText}>Username: {preview.username}</Text>
-            <Text style={styles.previewText}>Invite Link:</Text>
-            <Text selectable style={styles.previewLink}>{preview.inviteLink}</Text>
-            <View style={styles.previewActions}>
-              <Pressable style={styles.secondaryButton} onPress={handleCopyInviteLink}>
-                <Text style={styles.secondaryButtonText}>Copy Link</Text>
-              </Pressable>
-              <Pressable style={[styles.secondaryButton, styles.whatsappBtn]} onPress={handleShareWhatsApp}>
-                <Text style={styles.whatsappText}>Share on WhatsApp</Text>
-              </Pressable>
-            </View>
+            <Text style={styles.previewHint}>Temporary password has been sent through email.</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -303,6 +274,16 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.accent },
   content: { padding: SPACING.md, paddingBottom: SPACING.xxl, gap: SPACING.xs },
+  heroCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  heroTitle: { fontSize: 16, fontWeight: '800', color: COLORS.primary, marginBottom: 4 },
+  heroText: { fontSize: 13, color: COLORS.textSecondary, lineHeight: 19 },
   label: {
     fontSize: 12,
     color: COLORS.textSecondary,
@@ -342,18 +323,5 @@ const styles = StyleSheet.create({
   },
   previewTitle: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary },
   previewText: { color: COLORS.textSecondary, fontSize: 13 },
-  previewLink: { color: COLORS.info, fontSize: 13 },
-  secondaryButton: {
-    marginTop: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
-    flex: 1,
-  },
-  secondaryButtonText: { color: COLORS.textPrimary, fontWeight: '700' },
-  previewActions: { flexDirection: 'row', gap: SPACING.xs },
-  whatsappBtn: { backgroundColor: '#25D366', borderColor: '#25D366' },
-  whatsappText: { color: '#fff', fontWeight: '800' },
+  previewHint: { marginTop: SPACING.xs, color: COLORS.success, fontSize: 13, fontWeight: '700' },
 });

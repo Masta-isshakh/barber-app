@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import POSScreen from '../screens/pos/POSScreen';
 import AppointmentsScreen from '../screens/appointments/AppointmentsScreen';
@@ -13,6 +13,7 @@ import UsersScreen from '../screens/users/UsersScreen';
 import AccountScreen from '../screens/account/AccountScreen';
 import ServiceManagementScreen from '../screens/services/ServiceManagementScreen';
 import ShiftScreen from '../screens/shifts/ShiftScreen';
+import AuditLogsScreen from '../screens/audit/AuditLogsScreen';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,25 +30,27 @@ export type AdminTabParamList = {
   Services: undefined;
   Shifts: undefined;
   Users: undefined;
+  Audit: undefined;
   Account: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 
-function tabIcon(routeName: string, focused: boolean): string {
-  const icons: Record<string, [string, string]> = {
-    POS: ['💈', '💈'],
-    Appointments: ['📅', '📅'],
-    Barbers: ['🧔', '🧔'],
-    Reports: ['📊', '📊'],
-    Customers: ['👥', '👥'],
-    Services: ['🧾', '🧾'],
-    Shifts: ['🕒', '🕒'],
-    Users: ['➕', '➕'],
-    Account: ['👤', '👤'],
+function tabIconName(routeName: string): keyof typeof Ionicons.glyphMap {
+  const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+    POS: 'card-outline',
+    Appointments: 'calendar-outline',
+    Barbers: 'people-outline',
+    Reports: 'analytics-outline',
+    Customers: 'person-circle-outline',
+    Services: 'pricetags-outline',
+    Shifts: 'time-outline',
+    Users: 'person-add-outline',
+    Audit: 'document-text-outline',
+    Account: 'settings-outline',
   };
-  return icons[routeName]?.[focused ? 0 : 1] ?? '•';
+  return icons[routeName] ?? 'ellipse-outline';
 }
 
 function AdminTabs() {
@@ -63,11 +66,11 @@ function AdminTabs() {
           backgroundColor: COLORS.primary,
           borderTopColor: '#2a2a4a',
           paddingBottom: 4,
-          height: 60,
+          height: 64,
         },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
-        tabBarIcon: ({ focused }) => (
-          <Text style={{ fontSize: 20 }}>{tabIcon(route.name, focused)}</Text>
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons name={tabIconName(route.name)} size={size} color={color} />
         ),
       })}
     >
@@ -79,6 +82,7 @@ function AdminTabs() {
       {isAdmin ? <Tab.Screen name="Customers" component={CustomersScreen} /> : null}
       {isAdmin ? <Tab.Screen name="Services" component={ServiceManagementScreen} /> : null}
       {isAdmin ? <Tab.Screen name="Users" component={UsersScreen} /> : null}
+      {isAdmin ? <Tab.Screen name="Audit" component={AuditLogsScreen} /> : null}
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>
   );

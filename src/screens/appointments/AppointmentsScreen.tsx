@@ -17,6 +17,8 @@ import { useServices } from '../../hooks/useServices';
 import { useAppointments } from '../../hooks/useAppointments';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
 import type { Appointment, AppointmentStatus } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { writeAuditLog } from '../../lib/audit';
 
 const STATUS_COLORS: Record<AppointmentStatus, string> = {
   SCHEDULED: COLORS.info,
@@ -31,6 +33,7 @@ function todayStr() {
 }
 
 export default function AppointmentsScreen() {
+  const { isAdmin } = useAuth();
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const { appointments, loading, refetch } = useAppointments(selectedDate);
   const { barbers } = useBarbers();
@@ -105,6 +108,14 @@ export default function AppointmentsScreen() {
   async function updateStatus(appt: Appointment, status: AppointmentStatus) {
     try {
       await client.models.Appointment.update({ id: appt.id, status });
+      await writeAuditLog({
+        action: 'APPOINTMENT_STATUS_CHANGED',
+        entityType: 'Appointment',
+        entityId: appt.id,
+        actorRole: isAdmin ? 'ADMIN' : 'BARBER',
+        message: `Appointment for ${appt.customerName ?? 'walk-in'} changed to ${status}`,
+        metadata: { from: appt.status, to: status, barberId: appt.barberId },
+      });
       refetch();
     } catch (e: any) {
       Alert.alert('Error', e?.message);

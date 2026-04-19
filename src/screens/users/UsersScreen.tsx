@@ -2,16 +2,20 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   SafeAreaView,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { client } from '../../lib/amplify';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
+import { writeAuditLog } from '../../lib/audit';
 
 type InviteForm = {
   fullName: string;
@@ -66,11 +70,29 @@ export default function UsersScreen() {
 
       if (result.errors?.length) {
         setMessage(result.errors[0].message ?? 'Invitation failed.');
+        await writeAuditLog({
+          action: 'INVITE_BARBER_FAILED',
+          entityType: 'BarberProfile',
+          actorRole: 'ADMIN',
+          status: 'FAILED',
+          severity: 'ERROR',
+          message: result.errors[0].message ?? 'Invitation failed',
+          metadata: { email: inviteForm.email.trim().toLowerCase() },
+        });
         return;
       }
 
       if (!result.data) {
         setMessage('Invitation failed: no response from backend.');
+        await writeAuditLog({
+          action: 'INVITE_BARBER_FAILED',
+          entityType: 'BarberProfile',
+          actorRole: 'ADMIN',
+          status: 'FAILED',
+          severity: 'ERROR',
+          message: 'Invitation failed: no response from backend',
+          metadata: { email: inviteForm.email.trim().toLowerCase() },
+        });
         return;
       }
 
@@ -93,6 +115,15 @@ export default function UsersScreen() {
 
       if (profileResult.errors?.length) {
         setMessage(profileResult.errors[0].message ?? 'Invitation sent but profile creation failed.');
+        await writeAuditLog({
+          action: 'INVITE_BARBER_PROFILE_CREATE_FAILED',
+          entityType: 'BarberProfile',
+          actorRole: 'ADMIN',
+          status: 'FAILED',
+          severity: 'ERROR',
+          message: profileResult.errors[0].message ?? 'Profile creation failed after invite',
+          metadata: { username: result.data.username, email: result.data.email },
+        });
         return;
       }
 
@@ -103,15 +134,51 @@ export default function UsersScreen() {
       });
       setMessage('Invitation sent successfully.');
       setInviteForm(emptyInviteForm());
+
+      await writeAuditLog({
+        action: 'INVITE_BARBER_SENT',
+        entityType: 'BarberProfile',
+        entityId: result.data.username,
+        actorRole: 'ADMIN',
+        status: 'SUCCESS',
+        message: `Invitation sent to ${result.data.email}`,
+        metadata: {
+          username: result.data.username,
+          email: result.data.email,
+          specialty: inviteForm.specialty.trim(),
+        },
+      });
     } catch (error: any) {
       setMessage(error?.message ?? 'Invitation failed.');
+      await writeAuditLog({
+        action: 'INVITE_BARBER_EXCEPTION',
+        entityType: 'BarberProfile',
+        actorRole: 'ADMIN',
+        status: 'FAILED',
+        severity: 'ERROR',
+        message: error?.message ?? 'Invitation failed',
+      });
     } finally {
       setSaving(false);
     }
   }
 
-  function copyHint() {
-    Alert.alert('Invite Link', 'Copy the invite link from the card and send it to the barber on WhatsApp.');
+  async function handleCopyInviteLink() {
+    if (!preview?.inviteLink) return;
+    await Clipboard.setStringAsync(preview.inviteLink);
+    Alert.alert('Copied', 'Invite link copied to clipboard.');
+  }
+
+  async function handleShareWhatsApp() {
+    if (!preview?.inviteLink) return;
+    const msg = `Welcome to White Beard! Use this invitation link to set your password and access the app:\n${preview.inviteLink}`;
+    const waUrl = `whatsapp://send?text=${encodeURIComponent(msg)}`;
+    const canOpen = await Linking.canOpenURL(waUrl);
+    if (canOpen) {
+      await Linking.openURL(waUrl);
+      return;
+    }
+    await Share.share({ message: msg, title: 'Barber Invitation' });
   }
 
   return (
@@ -212,9 +279,14 @@ export default function UsersScreen() {
             <Text style={styles.previewText}>Username: {preview.username}</Text>
             <Text style={styles.previewText}>Invite Link:</Text>
             <Text selectable style={styles.previewLink}>{preview.inviteLink}</Text>
-            <Pressable style={styles.secondaryButton} onPress={copyHint}>
-              <Text style={styles.secondaryButtonText}>How to share</Text>
-            </Pressable>
+            <View style={styles.previewActions}>
+              <Pressable style={styles.secondaryButton} onPress={handleCopyInviteLink}>
+                <Text style={styles.secondaryButtonText}>Copy Link</Text>
+              </Pressable>
+              <Pressable style={[styles.secondaryButton, styles.whatsappBtn]} onPress={handleShareWhatsApp}>
+                <Text style={styles.whatsappText}>Share on WhatsApp</Text>
+              </Pressable>
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -278,6 +350,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     paddingVertical: SPACING.sm,
     alignItems: 'center',
+    flex: 1,
   },
   secondaryButtonText: { color: COLORS.textPrimary, fontWeight: '700' },
+  previewActions: { flexDirection: 'row', gap: SPACING.xs },
+  whatsappBtn: { backgroundColor: '#25D366', borderColor: '#25D366' },
+  whatsappText: { color: '#fff', fontWeight: '800' },
 });

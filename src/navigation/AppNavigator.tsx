@@ -11,6 +11,8 @@ import ReportsScreen from '../screens/reports/ReportsScreen';
 import CustomersScreen from '../screens/customers/CustomersScreen';
 import UsersScreen from '../screens/users/UsersScreen';
 import AccountScreen from '../screens/account/AccountScreen';
+import ServiceManagementScreen from '../screens/services/ServiceManagementScreen';
+import ShiftScreen from '../screens/shifts/ShiftScreen';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 
@@ -24,6 +26,8 @@ export type AdminTabParamList = {
   Barbers: undefined;
   Reports: undefined;
   Customers: undefined;
+  Services: undefined;
+  Shifts: undefined;
   Users: undefined;
   Account: undefined;
 };
@@ -38,6 +42,8 @@ function tabIcon(routeName: string, focused: boolean): string {
     Barbers: ['🧔', '🧔'],
     Reports: ['📊', '📊'],
     Customers: ['👥', '👥'],
+    Services: ['🧾', '🧾'],
+    Shifts: ['🕒', '🕒'],
     Users: ['➕', '➕'],
     Account: ['👤', '👤'],
   };
@@ -67,9 +73,11 @@ function AdminTabs() {
     >
       <Tab.Screen name="POS" component={POSScreen} />
       <Tab.Screen name="Appointments" component={AppointmentsScreen} />
-      <Tab.Screen name="Barbers" component={BarbersScreen} />
-      <Tab.Screen name="Reports" component={ReportsScreen} />
-      <Tab.Screen name="Customers" component={CustomersScreen} />
+      {isAdmin ? <Tab.Screen name="Barbers" component={BarbersScreen} /> : null}
+      <Tab.Screen name="Shifts" component={ShiftScreen} />
+      {isAdmin ? <Tab.Screen name="Reports" component={ReportsScreen} /> : null}
+      {isAdmin ? <Tab.Screen name="Customers" component={CustomersScreen} /> : null}
+      {isAdmin ? <Tab.Screen name="Services" component={ServiceManagementScreen} /> : null}
       {isAdmin ? <Tab.Screen name="Users" component={UsersScreen} /> : null}
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>

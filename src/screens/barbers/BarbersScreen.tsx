@@ -15,6 +15,7 @@ import { client } from '../../lib/amplify';
 import { useBarbers } from '../../hooks/useBarbers';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
 import type { BarberProfile } from '../../types';
+import { writeAuditLog } from '../../lib/audit';
 
 export default function BarbersScreen() {
   const { barbers, loading, refetch } = useBarbers();
@@ -35,6 +36,14 @@ export default function BarbersScreen() {
             setActionLoading(true);
             try {
               await client.models.BarberProfile.update({ id: barber.id, status: newStatus });
+              await writeAuditLog({
+                action: 'BARBER_STATUS_CHANGED',
+                entityType: 'BarberProfile',
+                entityId: barber.id,
+                actorRole: 'ADMIN',
+                message: `${barber.fullName} status changed to ${newStatus}`,
+                metadata: { from: barber.status, to: newStatus },
+              });
               refetch();
               setSelected(null);
             } catch (e: any) {

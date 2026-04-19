@@ -140,6 +140,26 @@ const schema = a.schema({
       allow.ownerDefinedIn('cognitoUsername').to(['create', 'read', 'update']),
     ]),
 
+  // ── Audit log ─────────────────────────────────────────────────────────────
+  AuditLog: a
+    .model({
+      actorUsername: a.string().required(),
+      actorDisplayName: a.string(),
+      actorRole: a.enum(['ADMIN', 'BARBER', 'SYSTEM']),
+      action: a.string().required(),
+      entityType: a.string().required(),
+      entityId: a.string(),
+      severity: a.enum(['INFO', 'WARNING', 'ERROR']),
+      status: a.enum(['SUCCESS', 'FAILED']),
+      message: a.string(),
+      metadataJson: a.string(),
+      occurredAt: a.datetime().required(),
+    })
+    .authorization((allow) => [
+      allow.group('admins'),
+      allow.authenticated().to(['create']),
+    ]),
+
   // ── Legacy RevenueEntry (kept for backwards compat) ─────────────────────
   RevenueEntry: a
     .model({

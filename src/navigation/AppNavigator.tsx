@@ -9,7 +9,10 @@ import AppointmentsScreen from '../screens/appointments/AppointmentsScreen';
 import BarbersScreen from '../screens/barbers/BarbersScreen';
 import ReportsScreen from '../screens/reports/ReportsScreen';
 import CustomersScreen from '../screens/customers/CustomersScreen';
+import UsersScreen from '../screens/users/UsersScreen';
+import AccountScreen from '../screens/account/AccountScreen';
 import { COLORS } from '../constants/colors';
+import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
   AdminTabs: undefined;
@@ -21,6 +24,8 @@ export type AdminTabParamList = {
   Barbers: undefined;
   Reports: undefined;
   Customers: undefined;
+  Users: undefined;
+  Account: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,11 +38,15 @@ function tabIcon(routeName: string, focused: boolean): string {
     Barbers: ['🧔', '🧔'],
     Reports: ['📊', '📊'],
     Customers: ['👥', '👥'],
+    Users: ['➕', '➕'],
+    Account: ['👤', '👤'],
   };
   return icons[routeName]?.[focused ? 0 : 1] ?? '•';
 }
 
 function AdminTabs() {
+  const { isAdmin } = useAuth();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -61,6 +70,8 @@ function AdminTabs() {
       <Tab.Screen name="Barbers" component={BarbersScreen} />
       <Tab.Screen name="Reports" component={ReportsScreen} />
       <Tab.Screen name="Customers" component={CustomersScreen} />
+      {isAdmin ? <Tab.Screen name="Users" component={UsersScreen} /> : null}
+      <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>
   );
 }

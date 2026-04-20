@@ -14,6 +14,7 @@ import AccountScreen from '../screens/account/AccountScreen';
 import ServiceManagementScreen from '../screens/services/ServiceManagementScreen';
 import ShiftScreen from '../screens/shifts/ShiftScreen';
 import AuditLogsScreen from '../screens/audit/AuditLogsScreen';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,6 +30,7 @@ export type AdminTabParamList = {
   Customers: undefined;
   Services: undefined;
   Shifts: undefined;
+  Notifications: undefined;
   Users: undefined;
   Audit: undefined;
   Account: undefined;
@@ -46,6 +48,7 @@ function tabIconName(routeName: string): keyof typeof Ionicons.glyphMap {
     Customers: 'person-circle-outline',
     Services: 'pricetags-outline',
     Shifts: 'time-outline',
+    Notifications: 'notifications-outline',
     Users: 'person-add-outline',
     Audit: 'document-text-outline',
     Account: 'settings-outline',
@@ -78,6 +81,7 @@ function AdminTabs() {
       <Tab.Screen name="Appointments" component={AppointmentsScreen} />
       {isAdmin ? <Tab.Screen name="Barbers" component={BarbersScreen} /> : null}
       <Tab.Screen name="Shifts" component={ShiftScreen} />
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
       {isAdmin ? <Tab.Screen name="Reports" component={ReportsScreen} /> : null}
       {isAdmin ? <Tab.Screen name="Customers" component={CustomersScreen} /> : null}
       {isAdmin ? <Tab.Screen name="Services" component={ServiceManagementScreen} /> : null}

@@ -6,6 +6,8 @@ export type PaymentMethod = 'CASH' | 'CARD' | 'QR' | 'SPLIT';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'REFUNDED' | 'VOIDED';
 export type AppointmentStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type ShiftStatus = 'OPEN' | 'CLOSED';
+export type NotificationType = 'INFO' | 'REQUEST_APPROVAL';
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 export type BarberProfile = {
@@ -110,6 +112,24 @@ export type Shift = {
   totalClients?: number;
 };
 
+export type StaffNotification = {
+  id: string;
+  recipientUsername: string;
+  recipientBarberId?: string;
+  title: string;
+  message: string;
+  notificationType?: NotificationType;
+  requiresApproval: boolean;
+  approvalStatus?: ApprovalStatus;
+  respondedAt?: string;
+  relatedTransactionId?: string;
+  receiptNumber?: string;
+  total?: number;
+  isRead: boolean;
+  createdAt: string;
+  readAt?: string;
+};
+
 // ── POS cart types ────────────────────────────────────────────────────────────
 export type CartItem = {
   service: ServiceItem;
@@ -138,6 +158,7 @@ export type AdminTabParamList = {
   Customers: undefined;
   Services: undefined;
   Shifts: undefined;
+  Notifications: undefined;
   Users: undefined;
   Audit: undefined;
   Account: undefined;

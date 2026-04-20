@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { client } from '../../lib/amplify';
+import { useAuth } from '../../context/AuthContext';
 import { useBarbers } from '../../hooks/useBarbers';
 import { useServices } from '../../hooks/useServices';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
@@ -45,9 +46,15 @@ const INITIAL_CART: CartState = {
 export default function POSScreen() {
   const { width } = useWindowDimensions();
   const IS_WIDE = width >= 768;
+  const { isAdmin, authUsername } = useAuth();
 
   const { barbers, loading: barbersLoading } = useBarbers();
   const { services, loading: servicesLoading } = useServices();
+
+  const availableBarbers = useMemo(
+    () => (isAdmin ? barbers : barbers.filter((b) => b.cognitoUsername === authUsername)),
+    [barbers, isAdmin, authUsername],
+  );
 
   const [cart, setCart] = useState<CartState>(INITIAL_CART);
   const [activeCategory, setActiveCategory] = useState<ServiceCategory | 'ALL'>('ALL');
@@ -122,6 +129,23 @@ export default function POSScreen() {
     setCart((prev) => ({ ...prev, discountPercent: d }));
   }, []);
 
+  useEffect(() => {
+    if (isAdmin) {
+      return;
+    }
+    if (availableBarbers.length !== 1) {
+      return;
+    }
+
+    const mine = availableBarbers[0];
+    setCart((prev) => {
+      if (prev.selectedBarber?.id === mine.id) {
+        return prev;
+      }
+      return { ...prev, selectedBarber: mine };
+    });
+  }, [availableBarbers, isAdmin]);
+
   // ── Totals ────────────────────────────────────────────────────────────────
   const subtotal = cart.items.reduce((s, i) => s + i.service.price * i.quantity, 0);
   const discountAmount = Math.round((subtotal * cart.discountPercent) / 100);
@@ -193,6 +217,10 @@ export default function POSScreen() {
         recipientBarberId: cart.selectedBarber.id,
         title: 'New sale completed',
         message: `Receipt ${receiptNumber} paid via ${method}. Total: QR ${total}.`,
+        notificationType: 'REQUEST_APPROVAL',
+        requiresApproval: true,
+        approvalStatus: 'PENDING',
+        respondedAt: undefined,
         relatedTransactionId: transactionId,
         receiptNumber,
         total,
@@ -234,7 +262,7 @@ export default function POSScreen() {
     }
 
     if (!cart.selectedBarber) {
-      if (barbers.length === 0) {
+      if (availableBarbers.length === 0) {
         Alert.alert('No active barbers', 'Activate a barber profile before processing sales.');
         return;
       }
@@ -296,7 +324,7 @@ export default function POSScreen() {
             <CartPanel
               cart={cart.items}
               selectedBarber={cart.selectedBarber}
-              barbers={barbers}
+              barbers={availableBarbers}
               onSelectBarber={selectBarber}
               onIncrement={increment}
               onDecrement={decrement}
@@ -322,9 +350,9 @@ export default function POSScreen() {
           {/* Sticky bottom cart bar */}
           <View style={styles.phoneCartBar}>
             {/* Barber quick-select */}
-            {barbers.length > 0 && (
+            {availableBarbers.length > 0 && (
               <View style={styles.phoneBarberRow}>
-                {barbers.slice(0, 5).map((b) => {
+                {availableBarbers.slice(0, 5).map((b) => {
                   const isSel = cart.selectedBarber?.id === b.id;
                   return (
                     <Pressable

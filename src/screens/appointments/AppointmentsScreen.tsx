@@ -33,11 +33,18 @@ function todayStr() {
 }
 
 export default function AppointmentsScreen() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, authUsername } = useAuth();
   const [selectedDate, setSelectedDate] = useState(todayStr());
   const { appointments, loading, refetch } = useAppointments(selectedDate);
   const { barbers } = useBarbers();
   const { services } = useServices();
+
+  const myBarber = barbers.find((b) => b.cognitoUsername === authUsername) ?? null;
+  const scopedAppointments =
+    isAdmin || !myBarber
+      ? appointments
+      : appointments.filter((a) => a.barberId === myBarber.id);
+  const selectableBarbers = isAdmin ? barbers : myBarber ? [myBarber] : [];
 
   // booking form
   const [showForm, setShowForm] = useState(false);
@@ -126,7 +133,15 @@ export default function AppointmentsScreen() {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>📅 Appointments</Text>
-        <Pressable onPress={() => setShowForm(true)} style={styles.addBtn}>
+        <Pressable
+          onPress={() => {
+            if (!isAdmin && myBarber) {
+              setForm((p) => ({ ...p, barberId: myBarber.id, barberName: myBarber.fullName }));
+            }
+            setShowForm(true);
+          }}
+          style={styles.addBtn}
+        >
           <Text style={styles.addBtnText}>+ Book</Text>
         </Pressable>
       </View>
@@ -156,7 +171,7 @@ export default function AppointmentsScreen() {
         <ActivityIndicator color={COLORS.accent} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={appointments}
+          data={scopedAppointments}
           keyExtractor={(a) => a.id}
           contentContainerStyle={styles.list}
           renderItem={({ item: appt }) => (
@@ -217,7 +232,7 @@ export default function AppointmentsScreen() {
             <Text style={styles.formLabel}>Barber *</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: 'row', gap: SPACING.xs }}>
-                {barbers.map((b) => (
+                {selectableBarbers.map((b) => (
                   <Pressable
                     key={b.id}
                     onPress={() => setForm((p) => ({ ...p, barberId: b.id, barberName: b.fullName }))}

@@ -2,12 +2,14 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
+  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { client } from '../../lib/amplify';
 import { useBarbers } from '../../hooks/useBarbers';
@@ -26,9 +28,6 @@ import type {
   ServiceItem,
 } from '../../types';
 
-const { width } = Dimensions.get('window');
-const IS_WIDE = width >= 768;
-
 function generateReceiptNumber() {
   const now = new Date();
   const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -44,6 +43,9 @@ const INITIAL_CART: CartState = {
 };
 
 export default function POSScreen() {
+  const { width } = useWindowDimensions();
+  const IS_WIDE = width >= 768;
+
   const { barbers, loading: barbersLoading } = useBarbers();
   const { services, loading: servicesLoading } = useServices();
 
@@ -244,30 +246,41 @@ export default function POSScreen() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const subtotalForBar = cart.items.reduce((s, i) => s + i.service.price * i.quantity, 0);
+  const discountForBar = Math.round((subtotalForBar * cart.discountPercent) / 100);
+  const totalForBar = subtotalForBar - discountForBar;
+
   return (
     <SafeAreaView style={styles.root}>
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerKicker}>Cashier Workspace</Text>
           <Text style={styles.headerTitle}>White Beard POS</Text>
         </View>
-        {processingPayment && <ActivityIndicator color={COLORS.accent} />}
+        <View style={styles.headerRight}>
+          {processingPayment ? (
+            <ActivityIndicator color={COLORS.accent} />
+          ) : (
+            <View style={styles.headerBadge}>
+              <Ionicons name="shield-checkmark-outline" size={13} color={COLORS.accent} />
+              <Text style={styles.headerBadgeText}>Live</Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      <View style={[styles.body, IS_WIDE && styles.bodyWide]}>
-        {/* Left: services */}
-        <View style={IS_WIDE ? styles.servicesWide : styles.servicesFull}>
-          <ServiceGrid
-            services={services}
-            onAdd={addToCart}
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-          />
-        </View>
-
-        {/* Right: cart (on wide screens shown as side panel; on narrow shown below) */}
-        {IS_WIDE ? (
+      {IS_WIDE ? (
+        /* ── TABLET / WIDE: side-by-side ── */
+        <View style={styles.bodyWide}>
+          <View style={styles.servicesWide}>
+            <ServiceGrid
+              services={services}
+              onAdd={addToCart}
+              activeCategory={activeCategory}
+              onCategoryChange={setActiveCategory}
+            />
+          </View>
           <View style={styles.cartSidePanel}>
             <CartPanel
               cart={cart.items}
@@ -282,24 +295,81 @@ export default function POSScreen() {
               onCharge={handleChargePress}
             />
           </View>
-        ) : (
-          // On phone: cart as bottom collapsible – show just the charge button row
-          <View style={styles.cartBottomBar}>
-            <CartPanel
-              cart={cart.items}
-              selectedBarber={cart.selectedBarber}
-              barbers={barbers}
-              onSelectBarber={selectBarber}
-              onIncrement={increment}
-              onDecrement={decrement}
-              onRemove={remove}
-              discountPercent={cart.discountPercent}
-              onDiscountChange={setDiscount}
-              onCharge={handleChargePress}
+        </View>
+      ) : (
+        /* ── PHONE: services full height + sticky cart footer ── */
+        <View style={styles.bodyPhone}>
+          <View style={styles.servicesFull}>
+            <ServiceGrid
+              services={services}
+              onAdd={addToCart}
+              activeCategory={activeCategory}
+              onCategoryChange={setActiveCategory}
             />
           </View>
-        )}
-      </View>
+
+          {/* Sticky bottom cart bar */}
+          <View style={styles.phoneCartBar}>
+            {/* Barber quick-select */}
+            {barbers.length > 0 && (
+              <View style={styles.phoneBarberRow}>
+                {barbers.slice(0, 5).map((b) => {
+                  const isSel = cart.selectedBarber?.id === b.id;
+                  return (
+                    <Pressable
+                      key={b.id}
+                      onPress={() => selectBarber(b)}
+                      style={[
+                        styles.phoneBarberChip,
+                        isSel && { backgroundColor: b.avatarColor ?? COLORS.accent, borderColor: b.avatarColor ?? COLORS.accent },
+                      ]}
+                    >
+                      <Text style={[styles.phoneBarberInitial, isSel && { color: '#fff' }]}>
+                        {b.fullName[0]}
+                      </Text>
+                      <Text style={[styles.phoneBarberName, isSel && { color: '#fff' }]} numberOfLines={1}>
+                        {b.fullName.split(' ')[0]}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Total + charge */}
+            <View style={styles.phoneChargeRow}>
+              <View style={styles.phoneCartInfo}>
+                {cart.items.length === 0 ? (
+                  <Text style={styles.phoneCartEmpty}>Tap a service to start</Text>
+                ) : (
+                  <>
+                    <Text style={styles.phoneCartCount}>
+                      {cart.items.reduce((s, i) => s + i.quantity, 0)} item{cart.items.reduce((s, i) => s + i.quantity, 0) > 1 ? 's' : ''}
+                    </Text>
+                    <Text style={styles.phoneCartTotal}>QR {totalForBar}</Text>
+                  </>
+                )}
+              </View>
+              <Pressable
+                onPress={handleChargePress}
+                disabled={cart.items.length === 0}
+                style={({ pressed }) => [
+                  styles.phoneChargeBtn,
+                  cart.items.length === 0 && styles.phoneChargeBtnDisabled,
+                  cart.items.length > 0 && pressed && { opacity: 0.85 },
+                ]}
+              >
+                <Text style={styles.phoneChargeBtnText}>
+                  {cart.items.length === 0 ? 'Charge' : `Charge · QR ${totalForBar}`}
+                </Text>
+                {cart.items.length > 0 && (
+                  <Ionicons name="arrow-forward" size={16} color={COLORS.primary} style={{ marginLeft: 6 }} />
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Payment Modal */}
       <PaymentModal
@@ -332,39 +402,162 @@ export default function POSScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#EEF0F3' },
+  root: { flex: 1, backgroundColor: '#ECEEF2' },
   loadingScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: SPACING.sm },
   loadingText: { color: COLORS.textSecondary, fontSize: 14 },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.md,
     backgroundColor: COLORS.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2F4E',
+    borderBottomColor: '#252847',
   },
-  headerKicker: { fontSize: 11, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle: { fontSize: 22, fontWeight: '900', color: COLORS.accent, letterSpacing: 0.6, marginTop: 2 },
-  body: { flex: 1 },
-  bodyWide: { flexDirection: 'row', padding: SPACING.md, gap: SPACING.md },
+  headerKicker: {
+    fontSize: 10,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    fontWeight: '700',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.accent,
+    letterSpacing: 0.4,
+    marginTop: 2,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.accent + '1A',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: COLORS.accent + '33',
+  },
+  headerBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.accent },
+
+  // Wide (tablet) layout
+  bodyWide: {
+    flex: 1,
+    flexDirection: 'row',
+    padding: SPACING.md,
+    gap: SPACING.md,
+    backgroundColor: '#ECEEF2',
+  },
   servicesWide: {
     flex: 1,
     backgroundColor: COLORS.card,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E4E7EC',
+    borderColor: '#DDE0E8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  servicesFull: { flex: 1 },
   cartSidePanel: {
     width: 360,
     backgroundColor: COLORS.card,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#E4E7EC',
+    borderColor: '#DDE0E8',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  cartBottomBar: { maxHeight: 420, borderTopWidth: 1, borderTopColor: COLORS.border },
+
+  // Phone layout
+  bodyPhone: { flex: 1, flexDirection: 'column' },
+  servicesFull: { flex: 1 },
+
+  // Phone sticky cart footer
+  phoneCartBar: {
+    backgroundColor: COLORS.card,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+    gap: SPACING.sm,
+  },
+  phoneBarberRow: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+  },
+  phoneBarberChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.5,
+    borderColor: '#DFE2E8',
+    justifyContent: 'center',
+  },
+  phoneBarberInitial: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: COLORS.primary,
+  },
+  phoneBarberName: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  phoneChargeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  phoneCartInfo: { flex: 1 },
+  phoneCartEmpty: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
+  phoneCartCount: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700' },
+  phoneCartTotal: { fontSize: 20, fontWeight: '900', color: COLORS.accent },
+  phoneChargeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    shadowColor: COLORS.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  phoneChargeBtnDisabled: {
+    backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  phoneChargeBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: COLORS.primary,
+    letterSpacing: 0.2,
+  },
 });

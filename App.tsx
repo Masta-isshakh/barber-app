@@ -363,17 +363,14 @@ export default function App() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch {
-      // ignore signOut errors (e.g. already signed out)
-    } finally {
-      setAuthUsername(null);
-      setAuthEmail(null);
-      setAuthDisplayName(null);
-      setGroups([]);
-    }
+  const handleLogout = () => {
+    // Clear local state immediately so the UI transitions to login at once
+    setAuthUsername(null);
+    setAuthEmail(null);
+    setAuthDisplayName(null);
+    setGroups([]);
+    // Fire Amplify signOut in the background — errors are safe to ignore
+    signOut().catch(() => {});
   };
 
   const handleInviteBarber = async () => {

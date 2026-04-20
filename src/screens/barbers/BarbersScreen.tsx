@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,26 +12,52 @@ import {
   View,
 } from 'react-native';
 import { client } from '../../lib/amplify';
-import { useBarbers } from '../../hooks/useBarbers';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
 import type { BarberProfile } from '../../types';
 import { writeAuditLog } from '../../lib/audit';
 
+const STATUS_COLOR: Record<string, string> = {
+  ACTIVE: COLORS.success,
+  INVITED: '#F59E0B',
+  DISABLED: COLORS.textMuted,
+};
+
 export default function BarbersScreen() {
-  const { barbers, loading, refetch } = useBarbers();
+  const [barbers, setBarbers] = useState<BarberProfile[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<BarberProfile | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  async function toggleStatus(barber: BarberProfile) {
-    const newStatus = barber.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+  async function fetchAll() {
+    setLoading(true);
+    try {
+      const result = await client.models.BarberProfile.list();
+      const sorted = ((result.data ?? []) as unknown as BarberProfile[]).sort((a, b) => {
+        const order = { INVITED: 0, ACTIVE: 1, DISABLED: 2 };
+        return (order[a.status] ?? 1) - (order[b.status] ?? 1);
+      });
+      setBarbers(sorted);
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to load barbers');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { fetchAll(); }, []);
+
+  async function changeStatus(barber: BarberProfile, newStatus: 'ACTIVE' | 'DISABLED') {
+    const labels: Record<string, string> = { ACTIVE: 'Activate', DISABLED: 'Disable' };
     Alert.alert(
-      `${newStatus === 'ACTIVE' ? 'Enable' : 'Disable'} ${barber.fullName}?`,
-      undefined,
+      `${labels[newStatus]} ${barber.fullName}?`,
+      newStatus === 'ACTIVE' && barber.status === 'INVITED'
+        ? 'This will grant the barber full workspace access.'
+        : undefined,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          style: newStatus === 'ACTIVE' ? 'default' : 'destructive',
+          style: newStatus === 'DISABLED' ? 'destructive' : 'default',
           onPress: async () => {
             setActionLoading(true);
             try {
@@ -44,7 +70,7 @@ export default function BarbersScreen() {
                 message: `${barber.fullName} status changed to ${newStatus}`,
                 metadata: { from: barber.status, to: newStatus },
               });
-              refetch();
+              fetchAll();
               setSelected(null);
             } catch (e: any) {
               Alert.alert('Error', e?.message);
@@ -57,6 +83,9 @@ export default function BarbersScreen() {
     );
   }
 
+  const activeCount = barbers.filter((b) => b.status === 'ACTIVE').length;
+  const invitedCount = barbers.filter((b) => b.status === 'INVITED').length;
+
   const renderBarber = ({ item: b }: { item: BarberProfile }) => (
     <Pressable onPress={() => setSelected(b)} style={styles.card}>
       <View style={[styles.avatar, { backgroundColor: b.avatarColor ?? COLORS.accent }]}>
@@ -65,11 +94,15 @@ export default function BarbersScreen() {
       <View style={styles.cardInfo}>
         <Text style={styles.cardName}>{b.fullName}</Text>
         <Text style={styles.cardSpecialty}>{b.specialty ?? '—'}</Text>
-        <Text style={styles.cardShift}>{b.shiftLabel ?? '—'}</Text>
+        {b.status === 'INVITED' ? (
+          <Text style={styles.invitedHint}>Awaiting first login</Text>
+        ) : (
+          <Text style={styles.cardShift}>{b.shiftLabel ?? '—'}</Text>
+        )}
       </View>
       <View style={styles.cardRight}>
-        <View style={[styles.statusBadge, { backgroundColor: b.status === 'ACTIVE' ? COLORS.success + '22' : COLORS.textMuted + '22' }]}>
-          <Text style={[styles.statusBadgeText, { color: b.status === 'ACTIVE' ? COLORS.success : COLORS.textMuted }]}>
+        <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLOR[b.status] ?? COLORS.textMuted) + '22' }]}>
+          <Text style={[styles.statusBadgeText, { color: STATUS_COLOR[b.status] ?? COLORS.textMuted }]}>
             {b.status}
           </Text>
         </View>
@@ -84,7 +117,14 @@ export default function BarbersScreen() {
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🧔 Barbers</Text>
-        <Text style={styles.headerSub}>{barbers.length} active</Text>
+        <View style={styles.headerStats}>
+          <Text style={styles.headerSub}>{activeCount} active</Text>
+          {invitedCount > 0 && (
+            <View style={styles.invitedBadge}>
+              <Text style={styles.invitedBadgeText}>{invitedCount} pending</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       {loading ? (
@@ -138,15 +178,33 @@ export default function BarbersScreen() {
                 <Pressable onPress={() => setSelected(null)} style={styles.closeSheetBtn}>
                   <Text style={styles.closeSheetText}>Close</Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => toggleStatus(selected)}
-                  disabled={actionLoading}
-                  style={[styles.toggleBtn, { backgroundColor: selected.status === 'ACTIVE' ? COLORS.error : COLORS.success }]}
-                >
-                  <Text style={styles.toggleBtnText}>
-                    {selected.status === 'ACTIVE' ? 'Disable' : 'Enable'}
-                  </Text>
-                </Pressable>
+                {selected.status === 'INVITED' && (
+                  <Pressable
+                    onPress={() => changeStatus(selected, 'ACTIVE')}
+                    disabled={actionLoading}
+                    style={[styles.toggleBtn, { backgroundColor: COLORS.success }]}
+                  >
+                    <Text style={styles.toggleBtnText}>✓ Activate</Text>
+                  </Pressable>
+                )}
+                {selected.status === 'ACTIVE' && (
+                  <Pressable
+                    onPress={() => changeStatus(selected, 'DISABLED')}
+                    disabled={actionLoading}
+                    style={[styles.toggleBtn, { backgroundColor: COLORS.error }]}
+                  >
+                    <Text style={styles.toggleBtnText}>Disable</Text>
+                  </Pressable>
+                )}
+                {selected.status === 'DISABLED' && (
+                  <Pressable
+                    onPress={() => changeStatus(selected, 'ACTIVE')}
+                    disabled={actionLoading}
+                    style={[styles.toggleBtn, { backgroundColor: COLORS.success }]}
+                  >
+                    <Text style={styles.toggleBtnText}>Re-enable</Text>
+                  </Pressable>
+                )}
               </View>
             </ScrollView>
           </View>
@@ -163,7 +221,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
   },
   headerTitle: { fontSize: 18, fontWeight: '800', color: COLORS.accent },
+  headerStats: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   headerSub: { fontSize: 12, color: COLORS.textMuted },
+  invitedBadge: { backgroundColor: '#F59E0B22', paddingHorizontal: SPACING.sm, paddingVertical: 2, borderRadius: RADIUS.full },
+  invitedBadgeText: { fontSize: 10, fontWeight: '700', color: '#F59E0B' },
   list: { padding: SPACING.md, gap: SPACING.sm },
   card: {
     flexDirection: 'row', backgroundColor: COLORS.card, borderRadius: RADIUS.md,
@@ -176,6 +237,7 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
   cardSpecialty: { fontSize: 12, color: COLORS.textSecondary },
   cardShift: { fontSize: 11, color: COLORS.textMuted },
+  invitedHint: { fontSize: 11, color: '#F59E0B', fontStyle: 'italic' },
   cardRight: { alignItems: 'flex-end', gap: 4 },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 2, borderRadius: RADIUS.full },
   statusBadgeText: { fontSize: 10, fontWeight: '700' },

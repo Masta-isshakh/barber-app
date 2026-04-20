@@ -187,6 +187,19 @@ export default function POSScreen() {
         ),
       );
 
+      // Notify the selected barber about the completed sale.
+      await client.models.StaffNotification.create({
+        recipientUsername: cart.selectedBarber.cognitoUsername,
+        recipientBarberId: cart.selectedBarber.id,
+        title: 'New sale completed',
+        message: `Receipt ${receiptNumber} paid via ${method}. Total: QR ${total}.`,
+        relatedTransactionId: transactionId,
+        receiptNumber,
+        total,
+        isRead: false,
+        createdAt: now,
+      });
+
       setCompletedSale({
         receiptNumber,
         paymentMethod: method,
@@ -226,9 +239,7 @@ export default function POSScreen() {
         return;
       }
 
-      const fallbackBarber = barbers[0];
-      setCart((prev) => ({ ...prev, selectedBarber: fallbackBarber }));
-      Alert.alert('Barber selected', `${fallbackBarber.fullName} selected. Tap charge again to continue.`);
+      Alert.alert('Select a barber', 'Please choose a barber before proceeding to payment.');
       return;
     }
 

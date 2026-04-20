@@ -160,6 +160,25 @@ const schema = a.schema({
       allow.authenticated().to(['create']),
     ]),
 
+  // ── Staff notifications ─────────────────────────────────────────────────
+  StaffNotification: a
+    .model({
+      recipientUsername: a.string().required(),
+      recipientBarberId: a.id(),
+      title: a.string().required(),
+      message: a.string().required(),
+      relatedTransactionId: a.id(),
+      receiptNumber: a.string(),
+      total: a.float(),
+      isRead: a.boolean().required(),
+      createdAt: a.datetime().required(),
+      readAt: a.datetime(),
+    })
+    .authorization((allow) => [
+      allow.group('admins').to(['create', 'read']),
+      allow.ownerDefinedIn('recipientUsername').to(['read', 'update']),
+    ]),
+
   // ── Legacy RevenueEntry (kept for backwards compat) ─────────────────────
   RevenueEntry: a
     .model({

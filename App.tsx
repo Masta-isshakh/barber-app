@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import React from 'react';
 import {
+  Alert,
   Linking,
   Pressable,
   SafeAreaView,
@@ -271,6 +272,64 @@ export default function App() {
       entriesSub.unsubscribe();
     };
   }, [authUsername, selectedBarberId]);
+
+  useEffect(() => {
+    if (!authUsername) {
+      return;
+    }
+
+    let cancelled = false;
+    let checking = false;
+
+    const checkUnreadNotifications = async () => {
+      if (checking) {
+        return;
+      }
+      checking = true;
+
+      try {
+        const result = await client.models.StaffNotification.list({
+          filter: {
+            recipientUsername: { eq: authUsername },
+            isRead: { eq: false },
+          },
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        const unread = [...(result.data ?? [])].sort(
+          (a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime(),
+        );
+
+        const latest = unread[0];
+        if (!latest) {
+          return;
+        }
+
+        Alert.alert(latest.title, latest.message);
+
+        await client.models.StaffNotification.update({
+          id: latest.id,
+          isRead: true,
+          readAt: new Date().toISOString(),
+        });
+      } catch {
+        // Keep user flow uninterrupted if notification check fails.
+      } finally {
+        checking = false;
+      }
+    };
+
+    checkUnreadNotifications();
+    const timer = setInterval(checkUnreadNotifications, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [authUsername]);
 
   const isAdmin = groups.includes('admins');
   const me = profiles.find((profile) => profile.cognitoUsername === authUsername) ?? null;

@@ -214,7 +214,7 @@ export default function CartPanel({
         {!selectedBarber && hasCart && (
           <View style={styles.barberWarning}>
             <Ionicons name="information-circle-outline" size={14} color={COLORS.warning} />
-            <Text style={styles.barberWarningText}>No barber selected — first one will be used</Text>
+            <Text style={styles.barberWarningText}>Please select a barber before payment</Text>
           </View>
         )}
         <Pressable

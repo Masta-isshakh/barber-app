@@ -1,17 +1,10 @@
 import React from 'react';
-import { Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { COLORS, RADIUS, SPACING } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AccountScreen() {
   const { authDisplayName, authUsername, isAdmin, onLogout } = useAuth();
-
-  function confirmLogout() {
-    Alert.alert('Sign out', 'Do you want to sign out now?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: onLogout },
-    ]);
-  }
 
   return (
     <SafeAreaView style={styles.root}>
@@ -23,7 +16,7 @@ export default function AccountScreen() {
         <Text style={styles.label}>Role</Text>
         <Text style={styles.value}>{isAdmin ? 'Admin' : 'Barber'}</Text>
 
-        <Pressable style={styles.signOutButton} onPress={confirmLogout}>
+        <Pressable style={styles.signOutButton} onPress={onLogout}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
       </View>

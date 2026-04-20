@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -38,8 +38,47 @@ export default function AppointmentsScreen() {
   const { appointments, loading, refetch } = useAppointments(selectedDate);
   const { barbers } = useBarbers();
   const { services } = useServices();
+  const [selfBarberId, setSelfBarberId] = useState<string | null>(null);
+  const [selfBarberName, setSelfBarberName] = useState<string | null>(null);
 
-  const myBarber = barbers.find((b) => b.cognitoUsername === authUsername) ?? null;
+  useEffect(() => {
+    if (!authUsername || isAdmin) {
+      setSelfBarberId(null);
+      setSelfBarberName(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSelfBarber = async () => {
+      try {
+        const result = await client.models.BarberProfile.list({
+          filter: { cognitoUsername: { eq: authUsername } },
+        });
+        const mine = (result.data ?? [])[0];
+        if (!cancelled) {
+          setSelfBarberId(mine?.id ?? null);
+          setSelfBarberName(mine?.fullName ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setSelfBarberId(null);
+          setSelfBarberName(null);
+        }
+      }
+    };
+
+    loadSelfBarber();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUsername, isAdmin]);
+
+  const myBarber =
+    barbers.find((b) => b.cognitoUsername === authUsername) ??
+    (selfBarberId && selfBarberName
+      ? { id: selfBarberId, fullName: selfBarberName, cognitoUsername: authUsername }
+      : null);
   const scopedAppointments =
     isAdmin || !myBarber
       ? appointments

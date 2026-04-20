@@ -23,7 +23,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.group('admins'),
-      allow.ownerDefinedIn('cognitoUsername').to(['read']),
+      allow.ownerDefinedIn('cognitoUsername').identityClaim('cognito:username').to(['read']),
     ]),
 
   // ── Service catalogue ───────────────────────────────────────────────────
@@ -137,7 +137,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.group('admins'),
-      allow.ownerDefinedIn('cognitoUsername').to(['create', 'read', 'update']),
+      allow.ownerDefinedIn('cognitoUsername').identityClaim('cognito:username').to(['create', 'read', 'update']),
     ]),
 
   // ── Audit log ─────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ const schema = a.schema({
     })
     .authorization((allow) => [
       allow.group('admins').to(['create', 'read']),
-      allow.ownerDefinedIn('recipientUsername').to(['read', 'update']),
+      allow.ownerDefinedIn('recipientUsername').identityClaim('cognito:username').to(['read', 'update']),
     ]),
 
   // ── Legacy RevenueEntry (kept for backwards compat) ─────────────────────

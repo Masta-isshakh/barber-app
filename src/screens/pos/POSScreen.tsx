@@ -50,10 +50,51 @@ export default function POSScreen() {
 
   const { barbers, loading: barbersLoading } = useBarbers();
   const { services, loading: servicesLoading } = useServices();
+  const [selfBarber, setSelfBarber] = useState<BarberProfile | null>(null);
+
+  useEffect(() => {
+    if (!authUsername || isAdmin) {
+      setSelfBarber(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadSelfBarber = async () => {
+      try {
+        const result = await client.models.BarberProfile.list({
+          filter: { cognitoUsername: { eq: authUsername } },
+        });
+        const mine = ((result.data ?? [])[0] ?? null) as BarberProfile | null;
+        if (!cancelled) {
+          setSelfBarber(mine);
+        }
+      } catch {
+        if (!cancelled) {
+          setSelfBarber(null);
+        }
+      }
+    };
+
+    loadSelfBarber();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUsername, isAdmin]);
 
   const availableBarbers = useMemo(
-    () => (isAdmin ? barbers : barbers.filter((b) => b.cognitoUsername === authUsername)),
-    [barbers, isAdmin, authUsername],
+    () => {
+      if (isAdmin) {
+        return barbers;
+      }
+
+      const ownFromList = barbers.filter((b) => b.cognitoUsername === authUsername);
+      if (ownFromList.length > 0) {
+        return ownFromList;
+      }
+      return selfBarber ? [selfBarber] : [];
+    },
+    [barbers, isAdmin, authUsername, selfBarber],
   );
 
   const [cart, setCart] = useState<CartState>(INITIAL_CART);

@@ -512,6 +512,14 @@ export default function App() {
         <StatusBar style="light" />
         <Text style={styles.title}>Profile Sync In Progress</Text>
         <Text style={styles.body}>Your account exists in Auth. Admin users can continue without a profile. Barber users should ask an admin to complete the invitation flow if this persists.</Text>
+        <View style={styles.syncActions}>
+          <Pressable style={styles.ghostButton} onPress={() => refreshSession()}>
+            <Text style={styles.ghostButtonText}>Retry</Text>
+          </Pressable>
+          <Pressable style={styles.syncLogoutButton} onPress={handleLogout}>
+            <Text style={styles.syncLogoutText}>Sign out</Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -609,6 +617,23 @@ const styles = StyleSheet.create({
   success: {
     color: '#a7f3d0',
     fontSize: 13,
+  },
+  syncActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  syncLogoutButton: {
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#450a0a',
+  },
+  syncLogoutText: {
+    color: '#fecaca',
+    fontWeight: '700',
   },
   tabs: {
     flexDirection: 'row',

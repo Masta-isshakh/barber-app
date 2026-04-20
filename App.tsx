@@ -276,15 +276,15 @@ export default function App() {
   const me = profiles.find((profile) => profile.cognitoUsername === authUsername) ?? null;
   const effectiveMe =
     me ??
-    (isAdmin && authUsername
+    (authUsername
       ? {
-          id: 'admin-bootstrap',
+          id: isAdmin ? 'admin-bootstrap' : 'barber-bootstrap',
           cognitoUsername: authUsername,
           fullName: authDisplayName ?? authEmail ?? authUsername,
           username: authEmail ?? authUsername,
           email: authEmail ?? '',
           phone: '',
-          role: 'ADMIN' as const,
+          role: isAdmin ? ('ADMIN' as const) : ('BARBER' as const),
           status: 'ACTIVE' as const,
           specialty: '',
           shiftLabel: '',
@@ -503,24 +503,6 @@ export default function App() {
           )}
         </ScrollView>
       </SafeAreaView>
-    );
-  }
-
-  if (!effectiveMe) {
-    return (
-      <View style={styles.centered}>
-        <StatusBar style="light" />
-        <Text style={styles.title}>Profile Sync In Progress</Text>
-        <Text style={styles.body}>Your account exists in Auth. Admin users can continue without a profile. Barber users should ask an admin to complete the invitation flow if this persists.</Text>
-        <View style={styles.syncActions}>
-          <Pressable style={styles.ghostButton} onPress={() => refreshSession()}>
-            <Text style={styles.ghostButtonText}>Retry</Text>
-          </Pressable>
-          <Pressable style={styles.syncLogoutButton} onPress={handleLogout}>
-            <Text style={styles.syncLogoutText}>Sign out</Text>
-          </Pressable>
-        </View>
-      </View>
     );
   }
 

@@ -15,6 +15,7 @@ import ServiceManagementScreen from '../screens/services/ServiceManagementScreen
 import ShiftScreen from '../screens/shifts/ShiftScreen';
 import AuditLogsScreen from '../screens/audit/AuditLogsScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import BarberWorkspaceScreen from '../screens/workspace/BarberWorkspaceScreen';
 import { COLORS } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
 
@@ -23,6 +24,7 @@ export type RootStackParamList = {
 };
 
 export type AdminTabParamList = {
+  Workspace: undefined;
   POS: undefined;
   Appointments: undefined;
   Barbers: undefined;
@@ -41,6 +43,7 @@ const Tab = createBottomTabNavigator<AdminTabParamList>();
 
 function tabIconName(routeName: string): keyof typeof Ionicons.glyphMap {
   const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+    Workspace: 'sparkles-outline',
     POS: 'card-outline',
     Appointments: 'calendar-outline',
     Barbers: 'people-outline',
@@ -77,6 +80,7 @@ function AdminTabs() {
         ),
       })}
     >
+      {!isAdmin ? <Tab.Screen name="Workspace" component={BarberWorkspaceScreen} /> : null}
       <Tab.Screen name="POS" component={POSScreen} />
       <Tab.Screen name="Appointments" component={AppointmentsScreen} />
       {isAdmin ? <Tab.Screen name="Barbers" component={BarbersScreen} /> : null}
